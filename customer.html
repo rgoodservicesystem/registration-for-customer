@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ทะเบียนผลิตภัณฑ์บริษัท</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f7fbff; --card:#fff; --border:#e6edf2; --ink:#0f172a; --mut:#6b7280;
+    --accent:#0ea5a5; --accent2:#60a5fa; --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Prompt",sans-serif;background:var(--bg);color:var(--ink);padding:20px}
+  .container{max-width:1100px;margin:0 auto}
+  .header{
+    display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,#f0fdfa,#ecfeff);
+    padding:16px;border-radius:12px;border:1px solid var(--border);box-shadow:0 6px 20px rgba(10,20,30,.04);
+    margin-bottom:14px;
+  }
+  .logo{
+    width:62px;height:62px;border-radius:10px;background:#fff;border:1px solid #dbf5f0;display:flex;align-items:center;justify-content:center;font-size:28px;
+    box-shadow:0 4px 12px rgba(10,20,30,.04)
+  }
+  .title{font-size:1.15rem;font-weight:700;color:var(--accent);}
+  .subtitle{color:var(--mut);font-size:0.95rem;margin-top:4px}
+  .controls{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+  input[type="search"]{flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--border);font-size:15px}
+  button{padding:10px 12px;border-radius:10px;border:0;cursor:pointer;font-weight:700}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+  .btn-ghost{background:#fff;border:1px solid #cfeef0;color:#0b6b6b}
+  .card{background:var(--card);border-radius:12px;padding:10px;border:1px solid var(--border);box-shadow:0 6px 18px rgba(10,20,30,.03)}
+  table{width:100%;border-collapse:collapse;margin-top:12px}
+  th,td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;font-size:14px;vertical-align:middle}
+  th{background:linear-gradient(180deg,#f7fbff,#f2f8ff);font-weight:700;color:#08323a;white-space:nowrap;position:sticky;top:0;z-index:1}
+  tbody tr:nth-child(even) td{background:#fbfeff}
+  .small{font-size:13px;color:var(--mut)}
+  .hint{font-size:13px;color:var(--mut);margin-top:6px}
+  @media (max-width:900px){
+    .header{flex-direction:column;align-items:flex-start}
+    .controls{flex-direction:column;align-items:stretch}
+  }
+  /* print styling for PDF export */
+  @media print{
+    body{padding:6mm}
+    .controls, .header .subtitle {display:none}
+    .header{box-shadow:none;border:none}
+    th{background:#f2f8ff !important}
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo" id="logo">🍯</div>
+      <div>
+        <div class="title">บริษัท ตัวอย่าง จำกัด</div>
+        <div class="subtitle">ทะเบียนผลิตภัณฑ์ที่ได้รับอนุญาต</div>
+      </div>
+      <div style="flex:1"></div>
+      <!-- optional: upload / settings area -->
+    </div>
+
+    <div class="controls">
+      <input type="search" id="q" placeholder="ค้นหา: บริษัท / ชื่อการค้า / ชื่อสามัญ / เลขทะเบียน..." aria-label="ค้นหา">
+      <button class="btn-ghost" id="clearBtn">ล้าง</button>
+      <button class="btn-primary" id="exportCsv">Export CSV</button>
+      <button class="btn-ghost" id="exportPdf">Export PDF</button>
+    </div>
+
+    <div class="card">
+      <div class="small hint">คอลัมน์: ชื่อการค้า, ชื่อสามัญ + สูตร, เลขทะเบียน, ผู้นำเข้า, ผู้ผลิต/แหล่งผลิต, ผู้จำหน่าย, นำเข้า/แบ่งบรรจุ, วันออกทะเบียน, วันหมดอายุ</div>
+
+      <table aria-label="ตารางทะเบียนผลิตภัณฑ์">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>ชื่อการค้า</th>
+            <th>ชื่อสามัญ + สูตร</th>
+            <th>เลขทะเบียน</th>
+            <th>ผู้นำเข้า</th>
+            <th>ผู้ผลิต / แหล่งผลิต</th>
+            <th>ผู้จำหน่าย</th>
+            <th>นำเข้า / แบ่งบรรจุ</th>
+            <th>วันออกทะเบียน</th>
+            <th>วันหมดอายุ</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <!-- ตัวอย่าง row เปล่า (ลบออกเมื่อนำข้อมูลจริงเข้า) -->
+          <tr>
+            <td>1</td>
+            <td>ตัวอย่างผลิตภัณฑ์ A</td>
+            <td>สามัญ X (สูตร: A-B-C)</td>
+            <td>AB-123456</td>
+            <td>บริษัท นำเข้า จำกัด</td>
+            <td>ผู้ผลิต Y, ประเทศ Z</td>
+            <td>ตัวแทนจำหน่าย</td>
+            <td>500 มล. / ขวด 100 มล.</td>
+            <td>2024-06-15</td>
+            <td>2026-06-14</td>
+          </tr>
+          <!-- ถ้าไม่มีข้อมูลจริง ให้มีแถว placeholder -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+  // Simple client-side search & CSV/Print export (no backend required)
+  const $ = id => document.getElementById(id);
+  const tbody = $('tbody');
+
+  // Search: filter visible rows by text content
+  $('q').addEventListener('input', ()=> {
+    const q = $('q').value.trim().toLowerCase();
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach(tr=>{
+      const text = tr.textContent.toLowerCase();
+      tr.style.display = text.includes(q) ? '' : 'none';
+    });
+  });
+
+  $('clearBtn').addEventListener('click', ()=>{
+    $('q').value = '';
+    $('q').dispatchEvent(new Event('input'));
+  });
+
+  // Export CSV — reads current visible rows
+  function download(filename, text) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8;' }));
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  function escapeCsvCell(s){
+    if (s === null || s === undefined) return '';
+    const str = String(s);
+    if (/[,"\n\r]/.test(str)) return `"${str.replace(/"/g,'""')}"`;
+    return str;
+  }
+
+  $('exportCsv').addEventListener('click', ()=>{
+    const headers = ['ลำดับ','ชื่อการค้า','ชื่อสามัญ + สูตร','เลขทะเบียน','ผู้นำเข้า','ผู้ผลิต / แหล่งผลิต','ผู้จำหน่าย','นำเข้า / แบ่งบรรจุ','วันออกทะเบียน','วันหมดอายุ'];
+    const rows = [headers];
+    tbody.querySelectorAll('tr').forEach(tr=>{
+      if (tr.style.display === 'none') return; // skip filtered out
+      const cells = Array.from(tr.children).map(td => td.textContent.trim());
+      rows.push(cells.map(escapeCsvCell));
+    });
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const name = `register_${new Date().toISOString().slice(0,10)}.csv`;
+    download(name, csv);
+  });
+
+  // Export PDF via print (user can Save as PDF)
+  $('exportPdf').addEventListener('click', ()=>{
+    window.print();
+  });
+
+  // OPTIONAL: helper to load data from JSON (e.g., when wiring Supabase later)
+  // call fillTable(dataArray) where dataArray is array of objects matching columns
+  function fillTable(data){
+    tbody.innerHTML = '';
+    data.forEach((r, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${idx+1}</td>
+        <td>${escapeHtml(r.brand_name)}</td>
+        <td>${escapeHtml(r.common_label)}</td>
+        <td>${escapeHtml(r.registration_no)}</td>
+        <td>${escapeHtml(r.importer)}</td>
+        <td>${escapeHtml(r.manufacturer_source)}</td>
+        <td>${escapeHtml(r.distributor)}</td>
+        <td>${escapeHtml(r.packed_volume)}</td>
+        <td>${escapeHtml(r.registration_date)}</td>
+        <td>${escapeHtml(r.expiry_date)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+  // Example: if you want to replace placeholder with real data later, call:
+  // fillTable(myArray);
+
+</script>
+</body>
+</html>
