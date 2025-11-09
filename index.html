@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R.GOOD SERVICE - Registration</title>
+    <style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #e8f5f7 0%, #f0f0f0 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .container {
+        display: flex;
+        max-width: 1100px;
+        width: 100%;
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    }
+
+    .left-section {
+        flex: 1;
+        padding: 60px 40px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        /* ใช้พื้นหลังเดิมที่ดูอบอุ่น */
+        background: linear-gradient(135deg, #f5f0e8 0%, #ede4d3 100%);
+    }
+
+    .logo-container {
+        text-align: center;
+    }
+    /* ************** CSS สำหรับโลโก้รูปภาพใหม่ ************** */
+   .main-logo-image {
+        max-width: 250px; /* ปรับขนาดให้โลโก้ใหม่ใหญ่ขึ้น ดูโดดเด่น */
+        height: auto;
+        display: block;
+        margin: 0 auto 15px;
+        /* ลบ CSS ที่สร้างขอบ/เงาแบบเดิมออก เพื่อให้เข้ากับสไตล์มินิมอล */
+        border: none; 
+        border-radius: 0; 
+        box-shadow: none;
+    }
+    
+    .tagline {
+        font-size: 11px;
+        /* ใช้สีเขียวเข้มเพื่อให้เข้ากับเส้นด้านล่างของโลโก้ */
+        color: #1e4d40; 
+        text-align: center;
+        max-width: 250px;
+        margin-top: 5px; /* ปรับระยะห่างให้ใกล้กับโลโก้มากขึ้น */
+        line-height: 1.4;
+    }
+
+    .company-name {
+        font-size: 24px;
+        font-weight: bold;
+        /* ใช้สีเขียวเข้มเป็นสีหลักของชื่อบริษัท */
+        color: #1e4d40; 
+        margin-top: 30px;
+        letter-spacing: 1px;
+    }
+
+    .subtitle {
+        font-size: 14px;
+        color: #7f8c8d;
+        margin-top: 5px;
+        letter-spacing: 3px;
+    }
+    /* **************************************************** */
+
+    .right-section {
+        flex: 1;
+        background: linear-gradient(135deg, #1e4d40 0%, #2d6a5a 100%);
+        padding: 60px 50px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .rice-logo {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 30px;
+        position: relative;
+    }
+
+    .rice-logo svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    .form-title {
+        color: #f0c674;
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+
+    .form-description {
+        color: #ffffff;
+        font-size: 13px;
+        line-height: 1.8;
+        margin-bottom: 40px;
+        text-align: center;
+    }
+
+    .form-group {
+        margin-bottom: 25px;
+    }
+
+    .menu-button {
+        width: 100%;
+        padding: 18px 25px;
+        background: rgba(255,255,255,0.08);
+        border: 2px solid rgba(255,255,255,0.2);
+        border-radius: 12px;
+        color: white;
+        font-size: 16px;
+        transition: all 0.4s ease;
+        cursor: pointer;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        backdrop-filter: blur(10px);
+    }
+
+    .menu-button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(240,198,116,0.3), transparent);
+        transition: left 0.6s;
+    }
+
+    .menu-button:hover::before {
+        left: 100%;
+    }
+
+    .menu-button:hover {
+        background: rgba(240,198,116,0.15);
+        border-color: #f0c674;
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(240,198,116,0.3);
+    }
+
+    .menu-button:active {
+        transform: translateY(-1px);
+    }
+
+    .button-icon {
+        display: inline-block;
+        margin-right: 10px;
+        font-size: 18px;
+    }
+
+    @media (max-width: 768px) {
+        .container {
+            flex-direction: column;
+        }
+
+        .left-section, .right-section {
+            padding: 40px 30px;
+        }
+    }
+</style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-section">
+    <div class="logo-container">
+        
+        <img src="https://i.ibb.co/JR95pvj2/f41e872c-3599-4de1-998c-13736708d6fd.png" alt="R.GOOD SERVICE Logo Minimal" class="main-logo-image">
+        
+        <p class="tagline">
+            ขึ้นทะเบียนมั่นใจ ไว้ใจ R.GOOD SERVICE<br>
+            มาตรฐานคุณภาพสูงสุด<br>
+        </p>
+    </div>
+    <h1 class="company-name">R.GOOD SERVICE</h1>
+    <p class="subtitle">REGISTRATION</p>
+</div>
+
+        <div class="right-section">
+            <div class="rice-logo">
+                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M50 10 Q45 30 40 50 L40 90 L45 90 L45 50 Q45 35 50 20" fill="#f0c674"/>
+                    <path d="M50 10 Q55 30 60 50 L60 90 L55 90 L55 50 Q55 35 50 20" fill="#d4a84a"/>
+                    <ellipse cx="35" cy="45" rx="8" ry="15" fill="#f0c674" transform="rotate(-20 35 45)"/>
+                    <ellipse cx="42" cy="40" rx="7" ry="13" fill="#e8b963" transform="rotate(-10 42 40)"/>
+                    <ellipse cx="50" cy="38" rx="7" ry="14" fill="#f0c674"/>
+                    <ellipse cx="58" cy="40" rx="7" ry="13" fill="#e8b963" transform="rotate(10 58 40)"/>
+                    <ellipse cx="65" cy="45" rx="8" ry="15" fill="#f0c674" transform="rotate(20 65 45)"/>
+                </svg>
+            </div>
+
+            <h2 class="form-title">R.GOOD SERVICE</h2>
+            <p class="form-description">
+                เรามีตัวช่วยอำนวยให้บริษัทของคุณสามารถเชื่อมต่อ ทุกฟังก์ชั่นเครื่องจักร
+                แต่ถ้ทุกให้ให้สร้อยรอบคอบกับต้นทุนให้เสร็จเข็นแก้เริ่มต้นไปกับ
+                ธุปเนาะของการเริ่มต้นเบ็ญ
+            </p>
+
+            <div class="menu-buttons">
+                <div class="form-group">
+                    <button class="menu-button" onclick="openLink('website')">
+                        <span class="button-icon">🌐</span>
+                        เว็บไซต์
+                    </button>
+                </div>
+                <div class="form-group">
+                    <button class="menu-button" onclick="openLink('tracking')">
+                        <span class="button-icon">📋</span>
+                        ติดตามงาน
+                    </button>
+                </div>
+                <div class="form-group">
+                    <button class="menu-button" onclick="openLink('contact')">
+                        <span class="button-icon">📞</span>
+                        ติดต่อ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openLink(type) {
+            // เพิ่ม animation เมื่อกดปุ่ม
+            // ต้องตรวจสอบว่า event.target มีอยู่จริงก่อน
+            if (event && event.target) {
+                event.target.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    event.target.style.transform = '';
+                }, 150);
+            }
+            
+
+            // ลิงก์ที่จะเปิด (เปลี่ยนตามที่ลูกค้ากำหนด)
+            const links = {
+                // *** แก้ไขลิงก์ 'website' เป็น URL ใหม่ตามที่ระบุ ***
+                website: 'https://serviceagriculture.github.io/R.Good-SERVICE-REGISTRATION/',
+                // *** สามารถเปลี่ยนลิงก์อื่นๆ ได้ตามต้องการ ***
+                tracking: 'https://www.example.com/tracking', 
+                contact: 'https://www.example.com/contact'
+            };
+
+            // แสดง notification (ถ้าไม่ต้องการให้แสดง alert ให้ลบบรรทัดนี้ออก)
+            // alert('กำลังเชื่อมต่อไปยัง: ' + type);
+            
+            // *** เปิดลิงก์ไปยังหน้าเว็บใหม่ (เปิดในแท็บใหม่) ***
+            if (links[type]) {
+                 window.open(links[type], '_blank');
+            }
+        }
+    </script>
+</body>
+</html>
