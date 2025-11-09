@@ -92,7 +92,15 @@
       <div style="flex:1"></div>
       <button id="btnNotePage" class="btn btn-ghost small">หมายเหตุทั้งหมด</button>
     </div>
-
+    <div style="display:flex;gap:8px;margin-left:8px">
+  <button id="filterAllBtn" class="btn btn-ghost small">ทั้งหมด</button>
+  <button id="filterRegBtn" class="btn btn-ghost small">เฉพาะมีเลขทะเบียน</button>
+  <button id="filterImportBtn" class="btn btn-ghost small">เฉพาะ "นำเข้า"</button>
+  <button id="filterPackBtn" class="btn btn-ghost small">เฉพาะ "แบ่งบรรจุ"</button>
+</div>
+<div style="flex:1"></div>
+      <div id="adminCount" class="small"></div>
+    </div>
     <table>
       <thead>
         <tr>
@@ -392,12 +400,29 @@ $('copyCodeBtn').addEventListener('click', async ()=>{ const code = $('cust_code
 
 // --- Import / Preview / Export via proxy ---
 $('tplBtn').addEventListener('click', ()=> {
-  const aoa = [['brand_name','common_label','registration_no','importer','manufacturer_source','distributor','packed_volume','registration_date','expiry_date','license_no'],
-               ['ตัวอย่าง','สามัญ (สูตร)','REG-001','บริษัท นำเข้า','ผู้ผลิต X','ผู้จำหน่าย Y','500 มล.','2024-01-01','2026-01-01','LIC-001']];
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'template');
-  XLSX.writeFile(wb, 'template_registrations.xlsx');
+  // หัวคอลัมน์ (ภาษาไทย) + ตัวอย่างแถว
+  const headers = ['brand_name','common_label','registration_no','importer','manufacturer_source','distributor','packed_volume','registration_date','expiry_date','license_no'];
+  const example = ['ตัวอย่าง','สูตรX','REG-001','บริษัท นำเข้า','ผู้ผลิต X','ผู้จำหน่าย Y','500 มล.','2024-01-01','2026-01-01','LIC-001'];
+
+  // สร้าง CSV (UTF-8 + BOM เพื่อให้ Excel เปิดตรง encoding)
+  const rows = [headers, example];
+  const csv = rows.map(r => r.map(cell => {
+    // escape double quotes
+    const s = (cell === null || cell === undefined) ? '' : String(cell);
+    return '"' + s.replace(/"/g, '""') + '"';
+  }).join(',')).join('\r\n');
+
+  const blob = new Blob(["\uFEFF", csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'template_registrations.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 });
+
 
 let lastFile = null;
 $('previewBtn').addEventListener('click', async ()=>{
