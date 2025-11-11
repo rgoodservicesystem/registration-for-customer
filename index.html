@@ -1,452 +1,122 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>R.GOOD SERVICE - บริการขึ้นทะเบียนมืออาชีพ</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Prompt', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f8f9fa;
-            min-height: 100vh;
-        }
-
-        /* ---------------------------------- */
-        /* Hero Section - โทนสีเข้มลุ่มลึก */
-        /* ---------------------------------- */
-        .hero {
-            background: linear-gradient(135deg, #1A3A31 0%, #2D4F46 100%); 
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%23ffffff" fill-opacity="0.03" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,170.7C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>');
-            background-size: cover;
-            background-position: bottom;
-        }
-
-        .hero-content {
-            max-width: 1200px;
-            width: 100%;
-            padding: 40px 20px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 80px; 
-            align-items: center;
-            position: relative;
-            z-index: 1;
-        }
-
-        .hero-left {
-            color: white;
-            animation: fadeInLeft 0.8s ease-out;
-        }
-
-        .company-title {
-            font-size: 60px; 
-            font-weight: 700;
-            color: #D4AF37; 
-            margin-bottom: 10px;
-            letter-spacing: 3px;
-        }
-
-        .company-subtitle {
-            font-size: 24px; 
-            color: rgba(255,255,255,0.95);
-            font-weight: 300;
-            letter-spacing: 8px; 
-            text-transform: uppercase;
-            margin-bottom: 30px;
-        }
-
-        .tagline {
-            font-size: 17px; 
-            line-height: 1.8;
-            color: rgba(255,255,255,0.85);
-            margin-bottom: 25px;
-            padding-left: 20px;
-            border-left: 3px solid #D4AF37; 
-        }
-
-        .features-list {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px; 
-            margin-top: 30px;
-        }
-
-        .feature-item {
-            display: flex;
-            align-items: center;
-            color: white;
-            font-size: 15px;
-        }
-
-        .feature-icon {
-            width: 28px; 
-            height: 28px;
-            background: #D4AF37; 
-            color: #1A3A31; 
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 12px;
-            font-size: 14px;
-            font-weight: 700;
-        }
-
-        /* Stats Section */
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-top: 50px;
-            padding-top: 30px;
-            border-top: 1px solid rgba(255,255,255,0.2);
-        }
-
-        .stat-item {
-            text-align: center;
-            color: white;
-        }
-
-        .stat-number {
-            font-size: 42px; 
-            font-weight: 700;
-            color: #D4AF37; 
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            font-size: 13px;
-            opacity: 0.8;
-        }
-
-        /* ---------------------------------- */
-        /* Hero Right - Card ที่ดูพรีเมียม */
-        /* ---------------------------------- */
-        .hero-right {
-            background: #ffffff;
-            border-radius: 20px;
-            padding: 50px 40px;
-            box-shadow: 0 15px 45px rgba(0,0,0,0.1); 
-            animation: fadeInRight 0.8s ease-out;
-        }
-
-        .card-title {
-            font-size: 32px; 
-            font-weight: 700;
-            color: #1A3A31; 
-            margin-bottom: 15px;
-            text-align: center;
-        }
-
-        .card-description {
-            font-size: 16px; 
-            color: #666;
-            line-height: 1.6;
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        /* ---------------------------------- */
-        /* Menu Button - ปุ่มสีทอง ตัวอักษรสีขาวตามต้องการ */
-        /* ---------------------------------- */
-        .menu-item {
-            margin-bottom: 20px;
-        }
-
-        .menu-button {
-            width: 100%;
-            padding: 22px 30px;
-            /* พื้นหลังสีทองหรูหรา */
-            background: linear-gradient(135deg, #D4AF37 0%, #E3C165 100%); 
-            border: none;
-            border-radius: 15px; 
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-
-        /* Shine effect */
-        .menu-button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); 
-            transition: left 0.6s;
-        }
-
-        .menu-button:hover::before {
-            left: 100%;
-        }
-
-        .menu-button:hover {
-            transform: translateY(-3px);
-            /* เงาที่หรูหราจากสีทอง */
-            box-shadow: 0 12px 30px rgba(212, 175, 55, 0.6); 
-            background: linear-gradient(135deg, #E3C165 0%, #D4AF37 100%); 
-        }
-
-        .menu-button:active {
-            transform: translateY(-1px);
-        }
-
-        /* ไอคอนในปุ่ม - ใช้สีขาว */
-        .button-icon {
-            font-size: 26px; 
-            color: #FFFFFF; /* สีขาวตามต้องการ */
-            text-shadow: 0 0 5px rgba(0,0,0,0.2); /* เพิ่มเงาเล็กน้อยให้อ่านง่ายขึ้นบนสีทอง */
-        }
-
-        /* ตัวอักษรหลักในปุ่ม - ใช้สีขาว */
-        .button-label {
-            font-size: 18px;
-            font-weight: 700;
-            color: #FFFFFF; /* สีขาวตามต้องการ */
-            text-shadow: 0 0 5px rgba(0,0,0,0.2);
-        }
-
-        /* ตัวอักษรย่อยในปุ่ม - ใช้สีขาว */
-        .button-sublabel {
-            font-size: 13px;
-            opacity: 0.9;
-            font-weight: 500;
-            font-style: italic;
-            color: #FFFFFF; /* สีขาวตามต้องการ */
-            text-shadow: 0 0 5px rgba(0,0,0,0.2);
-        }
-        
-        /* Contact Info */
-        .contact-info {
-            margin-top: 30px;
-            padding: 25px; 
-            background: #F8F9FA; 
-            border-radius: 12px;
-            border: 1px solid #eee; 
-            text-align: center;
-        }
-
-        .contact-item {
-            margin: 10px 0;
-            color: #444; 
-            font-size: 15px;
-        }
-
-        .contact-item strong {
-            color: #D4AF37; 
-            font-weight: 600;
-        }
-
-        /* Animations */
-        @keyframes fadeInLeft {
-            from { opacity: 0; transform: translateX(-30px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        @keyframes fadeInRight {
-            from { opacity: 0; transform: translateX(30px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        /* Responsive */
-        @media (max-width: 968px) {
-            .hero-content {
-                grid-template-columns: 1fr;
-                gap: 50px;
-                padding: 60px 20px;
-            }
-
-            .company-title {
-                font-size: 48px;
-            }
-
-            .company-subtitle {
-                font-size: 20px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .company-title {
-                font-size: 36px;
-                letter-spacing: 2px;
-            }
-
-            .company-subtitle {
-                font-size: 16px;
-                letter-spacing: 5px;
-            }
-
-            .menu-button {
-                padding: 18px 20px;
-            }
-            .button-icon {
-                font-size: 22px;
-            }
-            .button-label {
-                font-size: 16px;
-            }
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ระบบติดตามงาน — เลือกโหมดเข้าใช้งาน</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6fbff;
+    --card: #fff;
+    --border: #e6eef5;
+    --accent: #0ea5a5;
+    --accent2: #60a5fa;
+    --mut: #64748b;
+  }
+  body {
+    font-family: 'Prompt', sans-serif;
+    background: var(--bg);
+    color: #0f172a;
+    margin: 0;
+  }
+  header {
+    background: linear-gradient(180deg, #f0fbff, #eaf7ff);
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.3rem;
+  }
+  main {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 80px);
+    padding: 20px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: 18px;
+    border: 1px solid var(--border);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+    max-width: 700px;
+    width: 100%;
+    text-align: center;
+    padding: 40px 24px;
+  }
+  h1 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1.8rem;
+  }
+  p {
+    color: var(--mut);
+    margin-bottom: 36px;
+  }
+  .btn-group {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  a.btn {
+    display: inline-block;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 16px;
+    transition: all 0.25s ease;
+  }
+  a.btn-admin {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(14,165,165,0.25);
+  }
+  a.btn-admin:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(14,165,165,0.35);
+  }
+  a.btn-customer {
+    background: #fff;
+    border: 1px solid #bfeff2;
+    color: #0b6b6b;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+  }
+  a.btn-customer:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: translateY(-2px);
+  }
+  footer {
+    text-align: center;
+    padding: 20px;
+    color: var(--mut);
+    font-size: 13px;
+  }
+</style>
 </head>
 <body>
-    <div class="hero">
-        <div class="hero-content">
-            <div class="hero-left">
-                <h1 class="company-title">R.GOOD SERVICE</h1>
-                <p class="company-subtitle">REGISTRATION</p>
 
-                <div class="tagline">
-                    ผู้เชี่ยวชาญด้านการขึ้นทะเบียนปุ๋ยและวัตถุอันตรายทางการเกษตร<br>
-                    **มาตรฐานระดับสากล** บริการครบวงจร ด้วยทีมงานมืออาชีพ
-                </div>
+<header>
+  ระบบติดตามงาน / ใบทะเบียน
+</header>
 
-                <div class="features-list">
-                    <div class="feature-item">
-                        <div class="feature-icon">★</div>
-                        <span>ขึ้นทะเบียนถูกต้องตามกฎหมาย</span>
-                    </div>
-                    <div class="feature-item">
-                        <div class="feature-icon">★</div>
-                        <span>รวดเร็ว มีประสิทธิภาพ</span>
-                    </div>
-                    <div class="feature-item">
-                        <div class="feature-icon">★</div>
-                        <span>ให้คำปรึกษาฟรี</span>
-                    </div>
-                    <div class="feature-item">
-                        <div class="feature-icon">★</div>
-                        <span>ราคายุติธรรม โปร่งใส</span>
-                    </div>
-                </div>
-
-                <div class="stats">
-                    <div class="stat-item">
-                        <div class="stat-number">25+</div> 
-                        <div class="stat-label">ปีประสบการณ์</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-number">1,000+</div> 
-                        <div class="stat-label">ผลิตภัณฑ์สำเร็จ</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-number">99%</div> 
-                        <div class="stat-label">อัตราความสำเร็จ</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="hero-right">
-                <h2 class="card-title">เริ่มต้นกับเรา</h2>
-                <p class="card-description">
-                    เลือกบริการที่คุณต้องการ เราพร้อมให้คำปรึกษาและดำเนินการให้คุณอย่างมืออาชีพ เพื่อความสำเร็จทางธุรกิจของคุณ
-                </p>
-
-                <div class="menu-item">
-                    <button class="menu-button" onclick="openLink('website')">
-                        <span class="button-icon">🌐</span>
-                        <div class="button-text">
-                            <span class="button-label">เข้าสู่เว็บไซต์</span>
-                            <span class="button-sublabel">ดูบริการและรายละเอียดทั้งหมด</span>
-                        </div>
-                    </button>
-                </div>
-
-                <div class="menu-item">
-                    <button class="menu-button" onclick="openLink('tracking')">
-                        <span class="button-icon">📋</span>
-                        <div class="button-text">
-                            <span class="button-label">ติดตามสถานะงาน</span>
-                            <span class="button-sublabel">ตรวจสอบความคืบหน้าของเอกสาร</span>
-                        </div>
-                    </button>
-                </div>
-
-                <div class="menu-item">
-                    <button class="menu-button" onclick="openLink('contact')">
-                        <span class="button-icon">💬</span>
-                        <div class="button-text">
-                            <span class="button-label">ติดต่อเรา</span>
-                            <span class="button-sublabel">รับคำปรึกษาจากผู้เชี่ยวชาญวันนี้</span>
-                        </div>
-                    </button>
-                </div>
-
-                <div class="contact-info">
-                    <div class="contact-item">
-                        <strong>📞 โทร:</strong> 084-375-2399
-                    </div>
-                    <div class="contact-item">
-                        <strong>📧 อีเมล:</strong> parungrung24@gmail.com
-                    </div>
-                    <div class="contact-item">
-                        <strong>🕒 เวลาทำการ:</strong> 9:00-17:00 น. (จันทร์ - ศุกร์)
-                    </div>
-                </div>
-            </div>
-        </div>
+<main>
+  <div class="card">
+    <h1>เลือกโหมดการเข้าใช้งาน</h1>
+    <p>กรุณาเลือกประเภทผู้ใช้ของคุณเพื่อเข้าสู่ระบบ</p>
+    <div class="btn-group">
+      <a href="admin_login.html" class="btn btn-admin">เข้าสู่ระบบแอดมิน</a>
+      <a href="customer.html" class="btn btn-customer">เข้าสู่ระบบลูกค้า</a>
     </div>
+  </div>
+</main>
 
-    <script>
-        function openLink(type) {
-            const button = event.target.closest('.menu-button');
-            
-            // Animation effect
-            button.style.transform = 'scale(0.97)';
-            setTimeout(() => {
-                button.style.transform = '';
-            }, 150);
+<footer>
+  © 2025 ระบบติดตามงาน | พัฒนาโดยทีมของคุณ
+</footer>
 
-            // Links
-            const links = {
-                website: 'https://serviceagriculture.github.io/R.Good-SERVICE-REGISTRATION/',
-                tracking: 'https://line.me/ti/p/s-pKb_uHuX',
-                contact: 'https://line.me/ti/p/s-pKb_uHuX'
-            };
-
-            // Open link
-            if (links[type]) {
-                setTimeout(() => {
-                    window.open(links[type], '_blank');
-                }, 200);
-            }
-        }
-
-        // Smooth animations on load
-        window.addEventListener('load', () => {
-            document.body.style.opacity = '0';
-            setTimeout(() => {
-                document.body.style.transition = 'opacity 0.7s ease-out';
-                document.body.style.opacity = '1';
-            }, 100);
-        });
-    </script>
 </body>
 </html>
