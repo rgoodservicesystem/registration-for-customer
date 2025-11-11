@@ -3,32 +3,43 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Admin Portal — ใบอนุญาตทะเบียน (Proxy)</title>
+<title>Admin Portal — ใบอนุญาตทะเบียน</title>
+
+<!-- Supabase JS (ESM) -->
+<script type="module" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm"></script>
+<!-- SheetJS สำหรับ Excel -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root{--bg:#f6fbff;--card:#fff;--mut:#64748b;--border:#e6eef5;--accent:#0ea5a5;--accent2:#60a5fa}
   body{font-family:"Prompt",sans-serif;background:var(--bg);margin:0;color:#0f172a}
   header{padding:16px;background:linear-gradient(180deg,#f0fbff,#eaf7ff);border-bottom:1px solid var(--border)}
-  .wrap{max-width:1100px;margin:18px auto;padding:0 16px}
+  .wrap{max-width:1200px;margin:18px auto;padding:0 16px}
   .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 8px 28px rgba(10,30,60,.06)}
   .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   input,select,button,textarea{padding:10px;border-radius:10px;border:1px solid var(--border);font-size:14px;background:#fff}
   .btn{cursor:pointer}
   .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;font-weight:700}
   .btn-ghost{background:#fff;border:1px solid #d6eef3;color:#0b6b6b}
+  .btn-danger{background:#ef4444;color:#fff;border:none}
   .small{font-size:13px;color:var(--mut)}
   table{width:100%;border-collapse:collapse;margin-top:10px}
   th,td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left}
-  th{background:linear-gradient(180deg,#f7fbff,#f2f8ff);position:sticky;top:0}
+  th{background:linear-gradient(180deg,#f7fbff,#f2f8ff);position:sticky;top:0;z-index:1}
   .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:9999}
-  .modal-box{background:#fff;padding:16px;border-radius:12px;width:760px;max-width:96%}
+  .modal-box{background:#fff;padding:16px;border-radius:12px;width:820px;max-width:96%}
   td.editable{cursor:text}
   td.editing{background:#fffbe6}
+  .badge{padding:6px 8px;border-radius:999px;font-weight:600;font-size:13px}
+  .ok{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d090}
+  .warn{background:#fff7ed;color:#b45309;border:1px solid #fde68a80}
+  .exp{background:#fff1f2;color:#b91c1c;border:1px solid #fecaca90}
 </style>
 </head>
 <body>
 <header>
-  <div style="max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:12px">
+  <div style="max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:12px">
     <div style="font-weight:700">Admin Portal — ใบอนุญาตทะเบียน</div>
     <div style="flex:1"></div>
     <button id="signOutBtn" class="btn btn-ghost">Sign out</button>
@@ -51,7 +62,7 @@
   <div class="card">
     <label><strong>นำเข้า / ส่งออก (Preview + Proxy)</strong></label>
     <div class="row">
-      <button id="tplBtn" class="btn btn-ghost">ดาวน์โหลดเทมเพลต</button>
+      <button id="tplBtn" class="btn btn-ghost">ดาวน์โหลดเทมเพลต (.csv / .xlsx)</button>
       <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none">
       <button id="previewBtn" class="btn btn-ghost">Preview</button>
       <button id="impBtn" class="btn btn-primary">Import to Server</button>
@@ -75,6 +86,7 @@
       <input id="expiry_date" type="date" placeholder="วันหมดอายุ">
       <button id="addBtn" class="btn btn-primary">เพิ่ม</button>
     </div>
+    <div class="small" style="margin-top:8px">* double-click ช่องเพื่อแก้ไขแบบ inline</div>
   </div>
 
   <div class="card" style="overflow:auto; max-height:64vh">
@@ -92,15 +104,14 @@
       <div style="flex:1"></div>
       <button id="btnNotePage" class="btn btn-ghost small">หมายเหตุทั้งหมด</button>
     </div>
-    <div style="display:flex;gap:8px;margin-left:8px">
-  <button id="filterAllBtn" class="btn btn-ghost small">ทั้งหมด</button>
-  <button id="filterRegBtn" class="btn btn-ghost small">เฉพาะมีเลขทะเบียน</button>
-  <button id="filterImportBtn" class="btn btn-ghost small">เฉพาะ "นำเข้า"</button>
-  <button id="filterPackBtn" class="btn btn-ghost small">เฉพาะ "แบ่งบรรจุ"</button>
-</div>
-<div style="flex:1"></div>
-      <div id="adminCount" class="small"></div>
+
+    <div style="display:flex;gap:8px;margin-left:8px;margin-bottom:8px">
+      <button id="filterAllBtn" class="btn btn-ghost small">ทั้งหมด</button>
+      <button id="filterRegBtn" class="btn btn-ghost small">เฉพาะมีเลขทะเบียน</button>
+      <button id="filterImportBtn" class="btn btn-ghost small">เฉพาะ "นำเข้า"</button>
+      <button id="filterPackBtn" class="btn btn-ghost small">เฉพาะ "แบ่งบรรจุ"</button>
     </div>
+
     <table>
       <thead>
         <tr>
@@ -125,20 +136,18 @@
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-// ✅ Supabase ของคุณ
+// ================= CONFIG =================
 const SUPABASE_URL = 'https://jlrogimfjmtwdqiuyejj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impscm9naW1mam10d2RxaXV5ZWpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk5NDIyODUsImV4cCI6MjA3NTUxODI4NX0.OvX7qgcIF5aCcLebUEUR_6D2KTUP2pALCjRtHWJ5qZg';
+const LEGACY_ADMIN_KEY = 'PPHASIN2556'; // auto-login during development (you asked)
+
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// 🔒 ตัวเลือก (เฉพาะตอนพัฒนา): ฝัง legacy admin key ไว้ให้ auto-login
-// ⚠️ อย่าฝังคีย์จริงลง production เพราะใครเปิด devtools ก็เห็นได้
-const LEGACY_ADMIN_KEY = 'PPHASIN2556';  // <-- เปลี่ยนเป็นคีย์ของคุณ
+// tables
+const COMPANIES_TABLE = 'companies';
+const REG_TABLE = 'product_registrations';
 
-if (typeof window !== 'undefined' && LEGACY_ADMIN_KEY && LEGACY_ADMIN_KEY !== 'PUT_ADMIN_KEY_HERE') {
-  sessionStorage.setItem('legacy_admin_key', LEGACY_ADMIN_KEY);
-}
-
-
+// =============== Helpers ===============
 const $ = id => document.getElementById(id);
 const WARNING_DAYS = 90;
 let currentCompany = '';
@@ -147,74 +156,54 @@ let filteredRows = [];
 const selectedIds = new Set();
 let editingNoteId = null;
 
-// helper
-function esc(s){ return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function esc(s){ return String(s||'').replace(/[&<>'"]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\'':'&#39;','"':'&quot;'}[m]) ); }
 function fmtDateBE(d){ if(!d) return ''; const t=new Date(d); if(isNaN(t)) return ''; try{ return t.toLocaleDateString('th-TH-u-ca-buddhist',{year:'numeric',month:'short',day:'numeric', timeZone:'Asia/Bangkok'}); }catch(e){ return t.toISOString().split('T')[0];} }
 function toISO(d){ if(!d) return ''; const t=new Date(d); return isNaN(t)?'':t.toISOString().slice(0,10); }
 
-// --- AUTH / legacy key support ---
-function getAuthHeaders(){
-  // prefer Supabase session token if exist
-  const token = sb.auth.getSession ? (sb.auth.getSession().then(s=>s)) : null;
-  // faster: try legacy in sessionStorage
-  const legacy = sessionStorage.getItem('legacy_admin_key');
-  if(legacy) return { 'x-admin-key': legacy };
-  // else try supabase session sync
-  // We will do server calls without Authorization header if legacy key present; server can accept JWT too if provided
-  return {};
-}
+function getAuthHeaders(){ const legacy = sessionStorage.getItem('legacy_admin_key'); if(legacy) return { 'x-admin-key': legacy }; return {}; }
 
-// --- UI: load companies via proxy ---
+// =============== Load companies ===============
 async function loadCompanies(){
   const sel = $('companySelect');
   sel.innerHTML = `<option value="">— กำลังโหลดบริษัท —</option>`;
   try{
-    const res = await fetch('/api/admin/companies', { method:'GET', headers: getAuthHeaders() });
-    const j = await res.json();
-    if(!res.ok) throw new Error(j.error || 'ไม่สามารถโหลดบริษัทได้');
-    const data = j.rows || [];
-    sel.innerHTML = `<option value="">— เลือกบริษัท —</option>` + data.map(c=>`<option value="${esc(c.code)}">${esc(c.code)} ${c.name?'- '+esc(c.name):''}</option>`).join('');
-  }catch(e){
-    sel.innerHTML = `<option value="">โหลดบริษัทไม่สำเร็จ</option>`;
-    console.error(e);
-  }
+    const { data, error } = await sb.from(COMPANIES_TABLE).select('code,name').order('code',{ascending:true});
+    if(error) throw error;
+    const rows = data || [];
+    sel.innerHTML = `<option value="">— เลือกบริษัท —</option>` + rows.map(c=>`<option value="${esc(c.code)}">${esc(c.code)}${c.name? ' - '+esc(c.name):''}</option>`).join('');
+  }catch(e){ console.error(e); sel.innerHTML = `<option value="">โหลดบริษัทไม่สำเร็จ</option>`; }
 }
 
-// --- list rows via proxy ---
+// =============== Load registrations ===============
 async function loadDocs(code){
   currentCompany = code;
   selectedIds.clear();
   $('cust_code').value = '';
   if(!code){ $('tbody').innerHTML = `<tr><td colspan="14" class="small">กรุณาเลือกบริษัท</td></tr>`; $('adminCount').textContent=''; return; }
   try{
-    const res = await fetch(`/api/admin/list?code=${encodeURIComponent(code)}&limit=200&offset=0`, { headers: getAuthHeaders() });
-    const j = await res.json();
-    if(!res.ok) throw new Error(j.error || 'load failed');
-    const data = j.rows || [];
-    cachedRows = data.map(r => ({ ...r, ...classify(r.expiry_date) }));
+    const { data, error } = await sb.from(REG_TABLE).select('*').eq('company_code', code).order('id',{ascending:true});
+    if(error) throw error;
+    cachedRows = (data||[]).map(r=>({ ...r, ...classify(r.expiry_date) }));
     filteredRows = [...cachedRows];
     renderTable();
-    // try to fetch customer_code if available
-    const codeRes = await fetch(`/api/admin/company-code?code=${encodeURIComponent(code)}`, { headers: getAuthHeaders() });
-    if(codeRes.ok){ const cc = await codeRes.json(); $('cust_code').value = cc.plain_code || ''; }
-  }catch(e){
-    console.error(e);
-    $('tbody').innerHTML = `<tr><td colspan="14" class="small">${esc(e.message)}</td></tr>`;
-  }
+    // load plain_code
+    const { data: comp } = await sb.from(COMPANIES_TABLE).select('plain_code').eq('code', code).limit(1).single();
+    if(comp) $('cust_code').value = comp.plain_code || '';
+  }catch(e){ console.error(e); $('tbody').innerHTML = `<tr><td colspan="14" class="small">${esc(e.message)}</td></tr>`; }
 }
 
-// --- classify ---
+// =============== classify ===============
 function classify(expiry){
-  if(!expiry) return { cls:'', badge:`<span class="small">ปกติ</span>`, order:3, statusText:'ปกติ' };
+  if(!expiry) return { cls:'', badge:`<span class="badge ok">ปกติ</span>`, order:3, statusText:'ปกติ' };
   const eff = new Date(expiry);
-  if(isNaN(eff)) return { cls:'', badge:`<span class="small">ปกติ</span>`, order:3, statusText:'ปกติ' };
+  if(isNaN(eff)) return { cls:'', badge:`<span class="badge ok">ปกติ</span>`, order:3, statusText:'ปกติ' };
   const diff = Math.ceil((eff - new Date())/86400000);
-  if(diff < 0) return { cls:'expired', badge:`<span class="small">หมดอายุ</span>`, order:1, statusText:'หมดอายุ' };
-  if(diff <= WARNING_DAYS) return { cls:'warning', badge:`<span class="small">เหลือ ${diff} วัน</span>`, order:2, statusText:`เหลือ ${diff} วัน` };
-  return { cls:'', badge:`<span class="small">ปกติ</span>`, order:3, statusText:'ปกติ' };
+  if(diff < 0) return { cls:'expired', badge:`<span class="badge exp">หมดอายุ</span>`, order:1, statusText:'หมดอายุ' };
+  if(diff <= WARNING_DAYS) return { cls:'warning', badge:`<span class="badge warn">เหลือ ${diff} วัน</span>`, order:2, statusText:`เหลือ ${diff} วัน` };
+  return { cls:'', badge:`<span class="badge ok">ปกติ</span>`, order:3, statusText:'ปกติ' };
 }
 
-// --- render ---
+// =============== render ===============
 function renderTable(q=''){
   const tb = $('tbody');
   if(!filteredRows.length){ tb.innerHTML = `<tr><td colspan="14" class="small">ไม่พบรายการ</td></tr>`; $('adminCount').textContent = ''; return; }
@@ -254,19 +243,36 @@ function renderTable(q=''){
   $('chkAllVisible').checked = filteredRows.length>0 && filteredRows.every(r=>selectedIds.has(r.id));
 }
 
-// --- filter ---
+// =============== filter logic ===============
 function applyFilter(){
   const q = ($('adminSearch').value||'').trim().toLowerCase();
   if(!q){ filteredRows = [...cachedRows]; renderTable(); return; }
   const toks = q.split(/\s+/).filter(Boolean);
   filteredRows = cachedRows.filter(r=>{
-    const hay = [r.brand_name,r.common_label,r.registration_no,r.importer,r.manufacturer_source,r.distributor].join(' ').toLowerCase();
+    const hay = [r.brand_name,r.common_label,r.registration_no,r.importer,r.manufacturer_source,r.distributor,r.packed_volume].join(' ').toLowerCase();
     return toks.every(t => hay.includes(t));
   });
   renderTable(q);
 }
 
-// --- add new (proxy) ---
+// ===== filter buttons: reg/import/pack =====
+$('filterAllBtn').addEventListener('click', ()=>{ filteredRows = [...cachedRows]; renderTable(); });
+$('filterRegBtn').addEventListener('click', ()=>{ filteredRows = cachedRows.filter(r => r.registration_no && r.registration_no.trim() !== ''); renderTable(); });
+$('filterImportBtn').addEventListener('click', ()=>{
+  filteredRows = cachedRows.filter(r => {
+    const pv = String(r.packed_volume||'').toLowerCase();
+    const imp = String(r.importer||'').toLowerCase();
+    return pv.includes('นำเข้า') || imp.includes('นำเข้า') || pv.includes('import') || imp.includes('import');
+  }); renderTable();
+});
+$('filterPackBtn').addEventListener('click', ()=>{
+  filteredRows = cachedRows.filter(r => {
+    const pv = String(r.packed_volume||'').toLowerCase();
+    return pv.includes('แบ่ง') || pv.includes('แบ่งบรรจุ') || pv.includes('repack') || pv.includes('แบ่ง ');
+  }); renderTable();
+});
+
+// =============== add new ===============
 $('addBtn').addEventListener('click', async ()=>{
   if(!currentCompany) return alert('เลือกบริษัทก่อน');
   const payload = {
@@ -283,17 +289,14 @@ $('addBtn').addEventListener('click', async ()=>{
   };
   if(!payload.brand_name || !payload.common_label) return alert('กรอกชื่อการค้า และ ชื่อสามัญ/สูตร');
   try{
-    const headers = getAuthHeaders();
-    headers['Content-Type'] = 'application/json';
-    const res = await fetch('/api/admin/product', { method:'POST', headers, body: JSON.stringify({ company_code: payload.company_code, company_name: null, product: payload }) });
-    const j = await res.json();
-    if(!res.ok) throw new Error(j.error || 'add failed');
+    const { error } = await sb.from(REG_TABLE).insert(payload);
+    if(error) throw error;
     $('brand_name').value=''; $('common_label').value=''; $('registration_no').value='';
     loadDocs(currentCompany);
   }catch(e){ alert('เพิ่มไม่สำเร็จ: '+e.message); }
 });
 
-// --- inline edit (dblclick) ---
+// =============== inline edit ===============
 (function initInlineEdit(){
   const tb = $('tbody');
   tb.addEventListener('dblclick', (e)=>{
@@ -314,11 +317,9 @@ $('addBtn').addEventListener('click', async ()=>{
       if(!commit){ td.innerHTML = field.includes('date') ? (td.getAttribute('data-raw')?fmtDateBE(td.getAttribute('data-raw')):'') : esc(old); return; }
       const payload = {}; payload[field] = field.includes('date') ? (input.value||null) : (input.value.trim()||null);
       try{
-        const headers = getAuthHeaders(); headers['Content-Type']='application/json';
-        const res = await fetch('/api/admin/product', { method:'POST', headers, body: JSON.stringify({ company_code: currentCompany, company_name: null, product: { id, ...payload } }) });
-        const j = await res.json();
-        if(!res.ok) throw new Error(j.error || 'update failed');
-        // refresh local
+        const { error } = await sb.from(REG_TABLE).update(payload).eq('id', id);
+        if(error) throw error;
+        // refresh
         loadDocs(currentCompany);
       }catch(e){ alert('บันทึกไม่สำเร็จ: '+e.message); td.innerHTML = esc(old); }
     };
@@ -327,10 +328,10 @@ $('addBtn').addEventListener('click', async ()=>{
   });
 })();
 
-// --- notes / status / delete (via proxy) ---
+// =============== notes / status / delete ===============
 window.openNote = (id)=>{
   editingNoteId = id;
-  const row = cachedRows.find(r=>r.id===id);
+  const row = cachedRows.find(r=>r.id==id);
   $('noteText').value = row?.renewed_note || '';
   $('noteModal').style.display = 'flex';
 };
@@ -338,10 +339,8 @@ $('closeNote').addEventListener('click', ()=> $('noteModal').style.display='none
 $('saveNote').addEventListener('click', async ()=>{
   if(!editingNoteId) return;
   try{
-    const headers = getAuthHeaders(); headers['Content-Type']='application/json';
-    const res = await fetch('/api/admin/product', { method:'POST', headers, body: JSON.stringify({ company_code: currentCompany, company_name: null, product: { id: editingNoteId, renewed_note: $('noteText').value } }) });
-    const j = await res.json();
-    if(!res.ok) throw new Error(j.error||'save note failed');
+    const { error } = await sb.from(REG_TABLE).update({ renewed_note: $('noteText').value }).eq('id', editingNoteId);
+    if(error) throw error;
     $('noteModal').style.display='none';
     loadDocs(currentCompany);
   }catch(e){ alert('บันทึกหมายเหตุไม่สำเร็จ: '+e.message); }
@@ -349,10 +348,8 @@ $('saveNote').addEventListener('click', async ()=>{
 
 window.setStatus = async function(id, statusText){
   try{
-    const headers = getAuthHeaders(); headers['Content-Type']='application/json';
-    const res = await fetch('/api/admin/product', { method:'POST', headers, body: JSON.stringify({ company_code: currentCompany, company_name: null, product: { id, renewed_status: statusText, renewed_on: new Date().toISOString() } }) });
-    const j = await res.json();
-    if(!res.ok) throw new Error(j.error||'status failed');
+    const { error } = await sb.from(REG_TABLE).update({ renewed_status: statusText, renewed_on: new Date().toISOString() }).eq('id', id);
+    if(error) throw error;
     loadDocs(currentCompany);
   }catch(e){ alert('อัพเดตสถานะไม่สำเร็จ: '+e.message); }
 };
@@ -360,139 +357,142 @@ window.setStatus = async function(id, statusText){
 window.delDoc = async function(id){
   if(!confirm('ลบรายการนี้หรือไม่?')) return;
   try{
-    const headers = getAuthHeaders();
-    const res = await fetch(`/api/admin/product/${encodeURIComponent(id)}`, { method:'DELETE', headers });
-    const j = await res.json();
-    if(!res.ok) throw new Error(j.error || 'delete failed');
+    const { error } = await sb.from(REG_TABLE).delete().eq('id', id);
+    if(error) throw error;
     loadDocs(currentCompany);
   }catch(e){ alert('ลบไม่สำเร็จ: '+e.message); }
 };
 
-// --- bulk delete ---
+// bulk delete
 $('btnDeleteSel').addEventListener('click', async ()=>{
   if(selectedIds.size===0) return alert('เลือกก่อน');
   if(!confirm(`ลบ ${selectedIds.size} รายการ?`)) return;
   try{
-    const ids = Array.from(selectedIds);
-    const headers = getAuthHeaders(); headers['Content-Type']='application/json';
-    const res = await fetch('/api/admin/bulk-delete', { method:'POST', headers, body: JSON.stringify({ ids })});
-    const j = await res.json();
-    if(!res.ok) throw new Error(j.error||'bulk delete failed');
+    const ids = Array.from(selectedIds).map(x=>Number(x));
+    const { error } = await sb.from(REG_TABLE).delete().in('id', ids);
+    if(error) throw error;
     selectedIds.clear(); loadDocs(currentCompany);
   }catch(e){ alert('ลบไม่สำเร็จ: '+e.message); }
 });
 
-// --- set customer code (RPC) ---
+// =============== set customer code RPC-like ===============
 $('setCodeBtn').addEventListener('click', async ()=>{
   if(!currentCompany) return alert('เลือกบริษัท');
-  const code = $('cust_code').value.trim();
-  if(!code) return alert('กรุณากรอกรหัส');
+  const code = $('cust_code').value.trim(); if(!code) return alert('กรุณากรอกรหัส');
   try{
-    const headers = getAuthHeaders(); headers['Content-Type']='application/json';
-    const res = await fetch('/api/admin/set-customer-code', { method:'POST', headers, body: JSON.stringify({ company_code: currentCompany, plain_code: code })});
-    const j = await res.json();
-    if(!res.ok) throw new Error(j.error||'set code failed');
+    // upsert companies
+    const { error } = await sb.from(COMPANIES_TABLE).upsert({ code: currentCompany, plain_code: code }, { onConflict: 'code' });
+    if(error) throw error;
     alert('ตั้ง/เปลี่ยนรหัสเรียบร้อย');
     loadCompanies();
   }catch(e){ alert('ไม่สำเร็จ: '+e.message); }
 });
 $('copyCodeBtn').addEventListener('click', async ()=>{ const code = $('cust_code').value.trim(); if(!code) return alert('ยังไม่มีรหัส'); await navigator.clipboard.writeText(code); alert('คัดลอกแล้ว'); });
 
-// --- Import / Preview / Export via proxy ---
-$('tplBtn').addEventListener('click', ()=> {
-  // หัวคอลัมน์ (ภาษาไทย) + ตัวอย่างแถว
+// =============== template, preview, import, export ===============
+$('tplBtn').addEventListener('click', ()=>{
+  // offer both csv and xlsx download
+  // CSV
   const headers = ['brand_name','common_label','registration_no','importer','manufacturer_source','distributor','packed_volume','registration_date','expiry_date','license_no'];
-  const example = ['ตัวอย่าง','สูตรX','REG-001','บริษัท นำเข้า','ผู้ผลิต X','ผู้จำหน่าย Y','500 มล.','2024-01-01','2026-01-01','LIC-001'];
-
-  // สร้าง CSV (UTF-8 + BOM เพื่อให้ Excel เปิดตรง encoding)
-  const rows = [headers, example];
-  const csv = rows.map(r => r.map(cell => {
-    // escape double quotes
-    const s = (cell === null || cell === undefined) ? '' : String(cell);
-    return '"' + s.replace(/"/g, '""') + '"';
-  }).join(',')).join('\r\n');
-
-  const blob = new Blob(["\uFEFF", csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'template_registrations.csv';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  const example = ['ตัวอย่าง','สูตรX','REG-001','บริษัท นำเข้า','ผู้ผลิต X','ผู้จำหน่าย Y','นำเข้า 500 มล.','2024-01-01','2026-01-01','LIC-001'];
+  // create XLSX
+  const aoa = [headers, example];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'template');
+  XLSX.writeFile(wb, 'template_registrations.xlsx');
 });
 
-
-let lastFile = null;
 $('previewBtn').addEventListener('click', async ()=>{
-  const f = $('fileInput').files[0];
-  if(!f) return alert('เลือกไฟล์ก่อน preview');
-  lastFile = f;
+  const f = $('fileInput').files[0]; if(!f) return alert('เลือกไฟล์ก่อน preview');
   const ab = await f.arrayBuffer();
   const wb = XLSX.read(ab, { type:'array', cellDates:true });
   const ws = wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
-  // show first 10 rows
   const table = document.createElement('table'); table.style.width='100%'; table.border=1;
-  rows.slice(0,11).forEach((r,ri)=>{
-    const tr = table.insertRow();
-    r.forEach(c=> { const td = tr.insertCell(); td.textContent = c; });
-  });
-  const pa = $('previewArea'); pa.innerHTML = ''; pa.appendChild(table);
+  rows.slice(0,11).forEach((r,ri)=>{ const tr = table.insertRow(); r.forEach(c=>{ const td = tr.insertCell(); td.textContent = c; }); });
+  const pa = $('previewArea'); pa.innerHTML=''; pa.appendChild(table);
   pa.insertAdjacentHTML('afterbegin', `<div class="small">Preview: แถวตัวอย่างสูงสุด 10 แถว — หากต้องการนำเข้า กด Import to Server</div>`);
 });
 
 $('impBtn').addEventListener('click', async ()=>{
-  const f = $('fileInput').files[0];
-  if(!f) return alert('เลือกไฟล์ก่อน import');
-  if(!currentCompany) return alert('เลือกบริษัทก่อนนำเข้า');
+  const f = $('fileInput').files[0]; if(!f) return alert('เลือกไฟล์ก่อน import'); if(!currentCompany) return alert('เลือกบริษัทก่อนนำเข้า');
   if($('replaceMode').checked && !confirm('ลบข้อมูลเดิมของบริษัทนี้ก่อนนำเข้าหรือไม่?')) return;
   try{
-    const fd = new FormData();
-    fd.append('file', f);
-    fd.append('company_code', currentCompany);
-    fd.append('replace_mode', $('replaceMode').checked ? '1':'0');
-    const headers = getAuthHeaders();
-    const res = await fetch('/api/admin/import-csv', { method:'POST', headers, body: fd });
-    const j = await res.json();
-    if(!res.ok) throw new Error(j.error || 'import failed');
-    alert(`Import finished: success=${j.results.success} failed=${j.results.failed}`);
+    const ab = await f.arrayBuffer();
+    const wb = XLSX.read(ab, { type:'array', cellDates:true });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { defval:'' });
+    // map columns (flexible)
+    const pick = (obj, keys)=>{ for(const k of keys){ for(const kk in obj){ if(kk.trim().toLowerCase() === k) return obj[kk]; } } return ''; };
+    const mapped = rows.map(r=>{
+      const brand = pick(r, ['brand_name','ชื่อการค้า','brand']);
+      const common = pick(r, ['common_label','ชื่อสามัญ','สูตร','common_label']);
+      const regno = pick(r, ['registration_no','ทะเบียน','registration']);
+      const importer = pick(r, ['importer','ผู้นำเข้า']);
+      const manu = pick(r, ['manufacturer_source','ผู้ผลิต','แหล่งผลิต']);
+      const distrib = pick(r, ['distributor','ผู้จำหน่าย']);
+      const packed = pick(r, ['packed_volume','นำเข้า/แบ่งบรรจุ','packed_volume']);
+      const regdate = pick(r, ['registration_date','วันออกทะเบียน']);
+      const exp = pick(r, ['expiry_date','หมดอายุเดิม','expiry_date']);
+      const lic = pick(r, ['license_no','ใบอนุญาต','license_no']);
+      return {
+        company_code: currentCompany,
+        brand_name: String(brand||'').trim(),
+        common_label: String(common||'').trim(),
+        registration_no: String(regno||'').trim() || null,
+        importer: String(importer||'').trim() || null,
+        manufacturer_source: String(manu||'').trim() || null,
+        distributor: String(distrib||'').trim() || null,
+        packed_volume: String(packed||'').trim() || null,
+        registration_date: regdate || null,
+        expiry_date: exp || null,
+        license_no: String(lic||'').trim() || null
+      };
+    }).filter(x=>x.brand_name && x.common_label);
+
+    if(mapped.length === 0) return alert('ไม่พบแถวที่ถูกต้อง (ต้องมีชื่อการค้า + ชื่อสามัญ/สูตร)');
+
+    if($('replaceMode').checked){ const del = await sb.from(REG_TABLE).delete().eq('company_code', currentCompany); if(del.error) throw del.error; }
+
+    // insert in chunks
+    for(let i=0;i<mapped.length;i+=500){ const chunk = mapped.slice(i,i+500); const { error } = await sb.from(REG_TABLE).insert(chunk); if(error) throw error; }
+    alert(`นำเข้า ${mapped.length} รายการสำเร็จ`);
     loadDocs(currentCompany);
   }catch(e){ alert('นำเข้าไม่สำเร็จ: '+e.message); }
 });
 
+// export xlsx
 $('expBtn').addEventListener('click', async ()=>{
   if(!currentCompany) return alert('เลือกบริษัทก่อนส่งออก');
   try{
-    const headers = getAuthHeaders();
-    const res = await fetch(`/api/admin/export?code=${encodeURIComponent(currentCompany)}`, { headers });
-    if(!res.ok) { const j=await res.json(); throw new Error(j.error||'export failed'); }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `registrations_${currentCompany}.xlsx`; document.body.appendChild(a); a.click(); a.remove();
+    const rows = cachedRows || [];
+    const aoa = [['บริษัท','ชื่อการค้า','ชื่อสามัญ/สูตร','ทะเบียน','ผู้นำเข้า','ผู้ผลิต/แหล่งผลิต','ผู้จำหน่าย','นำเข้า/แบ่งบรรจุ','วันออกทะเบียน','วันหมดอายุ','ใบอนุญาต','สถานะ']];
+    rows.forEach(r=> aoa.push([r.company_code||'', r.brand_name||'', r.common_label||'', r.registration_no||'', r.importer||'', r.manufacturer_source||'', r.distributor||'', r.packed_volume||'', r.registration_date?toISO(r.registration_date):'', r.expiry_date?toISO(r.expiry_date):'', r.license_no||'', r.statusText||'' ]));
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, currentCompany.slice(0,31)); XLSX.writeFile(wb, `registrations_${currentCompany}.xlsx`);
   }catch(e){ alert('ส่งออกไม่สำเร็จ: '+e.message); }
 });
 
-// --- events & start ---
+// =============== misc events ===============
 $('companySelect').addEventListener('change', e=> { if(e.target.value) loadDocs(e.target.value); });
 $('adminSearch').addEventListener('input', ()=> applyFilter());
 $('adminClearBtn').addEventListener('click', ()=> { $('adminSearch').value=''; applyFilter(); });
 $('fileInput').addEventListener('change', ()=> $('previewBtn').click());
 $('btnSelectAllFiltered').addEventListener('click', ()=> filteredRows.forEach(r=> selectedIds.add(r.id)) || renderTable());
 $('btnClearSel').addEventListener('click', ()=> selectedIds.clear() || renderTable());
-
 $('signOutBtn').addEventListener('click', async ()=> { await sb.auth.signOut(); sessionStorage.removeItem('legacy_admin_key'); location.href = '/admin_login.html'; });
 
 // start
 document.addEventListener('DOMContentLoaded', async ()=>{
-  // session check: if no supabase session and no legacy key, redirect to login
-  const legacy = sessionStorage.getItem('legacy_admin_key');
+  // legacy key auto-login for dev
+  if(LEGACY_ADMIN_KEY && LEGACY_ADMIN_KEY !== 'PUT_ADMIN_KEY_HERE') sessionStorage.setItem('legacy_admin_key', LEGACY_ADMIN_KEY);
   const { data: { session } } = await sb.auth.getSession();
-  if(!session && !legacy){ location.href = '/admin_login.html'; return; }
+  const legacy = sessionStorage.getItem('legacy_admin_key');
+  if(!session && !legacy){ /* allow viewing companies if anon key has select rights */ }
   await loadCompanies();
 });
 
+// expose some for console
 window.openNote = openNote;
 window.setStatus = setStatus;
 window.delDoc = delDoc;
