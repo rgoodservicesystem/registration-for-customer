@@ -407,9 +407,11 @@ $('previewBtn').addEventListener('click', async ()=>{
   const f = $('fileInput').files[0]; if(!f) return alert('เลือกไฟล์ก่อน preview');
   try{
     const ab = await f.arrayBuffer();
-    const wb = XLSX.read(ab, { type:'array', cellDates:true });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+    const wb = XLSX.read(ab, { type:'array', raw:true }); // <--- เพิ่ม raw: true
+const ws = wb.Sheets[wb.SheetNames[0]];
+// ต้องระบุ header: 1 เพื่อให้อ่านเป็น Array of Arrays สำหรับ Preview
+const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:'', raw:true }); 
+// หากต้องการแสดงผลที่ถูกต้อง คุณอาจต้องใช้ { header: 1 } สำหรับ preview
     const table = document.createElement('table'); table.style.width='100%'; table.border=1;
     rows.slice(0,11).forEach((r)=>{ const tr = table.insertRow(); r.forEach(c=>{ const td = tr.insertCell(); td.textContent = c; }); });
     const pa = $('previewArea'); pa.innerHTML=''; pa.appendChild(table);
@@ -422,9 +424,9 @@ function normalizeDate(v){
   if(!v && v !== 0) return null;
   if(v instanceof Date && !isNaN(v)) return v.toISOString().slice(0,10);
   if(typeof v === 'number' && isFinite(v)){
-    const epoch = new Date(Math.round((v - 25569) * 86400 * 1000));
-    return epoch.toISOString().slice(0,10);
-  }
+  const epoch = new Date(Math.round((v - 25569) * 86400 * 1000));
+  return epoch.toISOString().slice(0,10);
+}
   if(typeof v === 'string'){
     let s = v.trim().replace(/\./g,'/').replace(/\s+/g,'');
     const thnums = {'๐':'0','๑':'1','๒':'2','๓':'3','๔':'4','๕':'5','๖':'6','๗':'7','๘':'8','๙':'9'};
@@ -458,9 +460,10 @@ $('impBtn').addEventListener('click', async ()=>{
   if($('replaceMode').checked && !confirm('ลบข้อมูลเดิมของบริษัทนี้ก่อนนำเข้าหรือไม่?')) return;
   try{
     const ab = await f.arrayBuffer();
-    const wb = XLSX.read(ab, { type:'array', cellDates:true });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { defval:'' });
+    const wb = XLSX.read(ab, { type:'array', raw:true }); // <--- เปลี่ยน
+const ws = wb.Sheets[wb.SheetNames[0]];
+// ต้องอ่านเป็น JSON (Array of Objects) สำหรับ Import
+const rows = XLSX.utils.sheet_to_json(ws, { defval:'', raw:true }); // <--- เพิ่ม raw: true
 
     const mapped = rows.map(r=>{
       const brand = pick(r, ['brand_name','ชื่อการค้า','brand']);
