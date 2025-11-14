@@ -2,192 +2,364 @@
 <html lang="th">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>ทะเบียนผลิตภัณฑ์บริษัท</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Customer Portal — ตรวจสอบรหัสลูกค้า</title>
+
+<!-- Supabase UMD (mobile friendly) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#f7fbff; --card:#fff; --border:#e6edf2; --ink:#0f172a; --mut:#6b7280;
-    --accent:#0ea5a5; --accent2:#60a5fa; --radius:12px;
+    --bg:#f6fbff; --ink:#0f172a; --mut:#64748b; --card:#ffffff; --border:#e6eef5;
+    --accent:#0ea5a5; --accent2:#60a5fa; --radius:16px;
+    --ok:#065f46; --warn:#b45309; --exp:#b91c1c;
   }
   *{box-sizing:border-box}
-  body{margin:0;font-family:"Prompt",sans-serif;background:var(--bg);color:var(--ink);padding:20px}
-  .container{max-width:1100px;margin:0 auto}
-  .header{
-    display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,#f0fdfa,#ecfeff);
-    padding:16px;border-radius:12px;border:1px solid var(--border);box-shadow:0 6px 20px rgba(10,20,30,.04);
-    margin-bottom:14px;
+  body{
+    margin:0; font-family:"Prompt",ui-sans-serif,system-ui; color:var(--ink);
+    background:
+      radial-gradient(1000px 500px at 10% -10%, #e6f7ff 0%, transparent 60%),
+      radial-gradient(900px 450px at 110% 0%, #e8fff6 0%, transparent 60%),
+      var(--bg);
   }
-  .logo{
-    width:62px;height:62px;border-radius:10px;background:#fff;border:1px solid #dbf5f0;display:flex;align-items:center;justify-content:center;font-size:28px;
-    box-shadow:0 4px 12px rgba(10,20,30,.04)
+  .wrap{max-width:1100px;margin:22px auto;padding:0 14px}
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+    padding:18px; box-shadow:0 8px 28px rgba(10,30,60,.06); margin-bottom:14px
   }
-  .title{font-size:1.15rem;font-weight:700;color:var(--accent);}
-  .subtitle{color:var(--mut);font-size:0.95rem;margin-top:4px}
-  .controls{display:flex;gap:8px;align-items:center;margin-bottom:12px}
-  input[type="search"]{flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--border);font-size:15px}
-  button{padding:10px 12px;border-radius:10px;border:0;cursor:pointer;font-weight:700}
-  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
-  .btn-ghost{background:#fff;border:1px solid #cfeef0;color:#0b6b6b}
-  .card{background:var(--card);border-radius:12px;padding:10px;border:1px solid var(--border);box-shadow:0 6px 18px rgba(10,20,30,.03)}
-  table{width:100%;border-collapse:collapse;margin-top:12px}
-  th,td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;font-size:14px;vertical-align:middle}
-  th{background:linear-gradient(180deg,#f7fbff,#f2f8ff);font-weight:700;color:#08323a;white-space:nowrap;position:sticky;top:0;z-index:1}
-  tbody tr:nth-child(even) td{background:#fbfeff}
+  h2{margin:0 0 10px; font-size:22px}
+  .mut{color:var(--mut)}
+  input,button,select,textarea{
+    padding:12px 12px; border-radius:12px; border:1px solid var(--border);
+    background:#fff; color:var(--ink); font-size:15px;
+  }
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+  .spacer{flex:1}
+  .btn{cursor:pointer; background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; font-weight:700; border:none; padding:12px 14px; border-radius:12px}
+  .btn-ghost{background:#fff; color:#0e7490; border:1px solid #94d5e5}
+  table{width:100%; border-collapse:collapse; margin-top:12px; background:#fff; border-radius:12px; overflow:hidden}
+  th,td{padding:12px 14px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; font-size:15px}
+  th{background:linear-gradient(180deg,#f7fbff,#f2f8ff); color:#0b3a4f; font-weight:700; position:sticky; top:0; z-index:1}
+  .badge{padding:6px 10px; border-radius:999px; font-size:13px; font-weight:700}
+  .ok{ color:var(--ok); background:#ecfdf5;border:1px solid #a7f3d090}
+  .warn{ color:var(--warn); background:#fff7ed;border:1px solid #fde68a80}
+  .exp{ color:var(--exp); background:#fff1f2;border:1px solid #fecaca90}
+  .btn-note{padding:8px 10px;border-radius:10px;border:1px solid #94d5e5;background:#f8feff;color:#0e7490;cursor:pointer}
+  #noteModal{position:fixed;inset:0;display:none;background:rgba(0,0,0,.45);align-items:center;justify-content:center;z-index:9999}
+  #noteBox{background:#fff;padding:20px;border-radius:14px;max-width:640px;width:94%}
   .small{font-size:13px;color:var(--mut)}
-  .hint{font-size:13px;color:var(--mut);margin-top:6px}
-  @media (max-width:900px){
-    .header{flex-direction:column;align-items:flex-start}
-    .controls{flex-direction:column;align-items:stretch}
-  }
-  /* print styling for PDF export */
-  @media print{
-    body{padding:6mm}
-    .controls, .header .subtitle {display:none}
-    .header{box-shadow:none;border:none}
-    th{background:#f2f8ff !important}
+  @media (max-width:480px){
+    input,button{font-size:16px}
+    th,td{font-size:16px}
   }
 </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="logo" id="logo">🍯</div>
-      <div>
-        <div class="title">บริษัท ตัวอย่าง จำกัด</div>
-        <div class="subtitle">ทะเบียนผลิตภัณฑ์ที่ได้รับอนุญาต</div>
-      </div>
+<div class="wrap">
+  <!-- Welcome card with code input -->
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="font-weight:700;font-size:20px">Customer Portal — ตรวจสอบรหัสลูกค้า</div>
       <div style="flex:1"></div>
-      <!-- optional: upload / settings area -->
+      <button id="helpBtn" class="btn-ghost">ช่วยเหลือ</button>
+    </div>
+    <div class="mut small" style="margin-top:8px">กรอกหรือวางรหัสลูกค้า (plain code) เพื่อดูรายการทะเบียนของบริษัทคุณ</div>
+
+    <div style="margin-top:12px" class="row">
+      <input id="code" placeholder="ใส่รหัสลูกค้า เช่น RG-1234" autocomplete="one-time-code" inputmode="text" style="min-width:280px">
+      <button id="enterBtn" class="btn">เข้าดูข้อมูล</button>
+      <div class="spacer"></div>
+      <button id="toSummaryBtn" class="btn-ghost">ดูสรุปทั้งหมด</button>
+    </div>
+    <div id="loading" class="mut" style="margin-top:8px; display:none">กำลังดึงข้อมูล...</div>
+    <div id="err" class="mut" style="color:#b91c1c;margin-top:8px"></div>
+  </div>
+
+  <!-- data card (hidden until loaded) -->
+  <div class="card" id="dataCard" style="display:none">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <div>
+        <div class="mut">บริษัทของคุณ</div>
+        <div id="companyName" style="font-weight:700;font-size:20px">—</div>
+      </div>
+      <div class="spacer"></div>
+      <input id="q" placeholder="ค้นหา: ชื่อการค้า/ชื่อสามัญ/ทะเบียน/ผู้นำเข้า/ผู้ผลิต/หมายเหตุ" style="min-width:260px">
+      <button id="clearBtn" class="btn-ghost">ล้าง</button>
+      <button id="refreshBtn" class="btn">รีเฟรช</button>
+      <div style="width:12px"></div>
     </div>
 
-    <div class="controls">
-      <input type="search" id="q" placeholder="ค้นหา: บริษัท / ชื่อการค้า / ชื่อสามัญ / เลขทะเบียน..." aria-label="ค้นหา">
-      <button class="btn-ghost" id="clearBtn">ล้าง</button>
-      <button class="btn-primary" id="exportCsv">Export CSV</button>
-      <button class="btn-ghost" id="exportPdf">Export PDF</button>
+    <div class="row" style="margin-top:10px; gap:8px; align-items:center">
+      <div class="mut" style="font-weight:600">ค้นหาด่วน:</div>
+      <div class="spacer"></div>
+      <div id="count" class="mut">—</div>
     </div>
 
-    <div class="card">
-      <div class="small hint">คอลัมน์: ชื่อการค้า, ชื่อสามัญ + สูตร, เลขทะเบียน, ผู้นำเข้า, ผู้ผลิต/แหล่งผลิต, ผู้จำหน่าย, นำเข้า/แบ่งบรรจุ, วันออกทะเบียน, วันหมดอายุ</div>
-
-      <table aria-label="ตารางทะเบียนผลิตภัณฑ์">
+    <div style="overflow:auto; max-height:56vh; margin-top:12px">
+      <table>
         <thead>
           <tr>
             <th>#</th>
+            <th>บริษัท</th>
             <th>ชื่อการค้า</th>
-            <th>ชื่อสามัญ + สูตร</th>
-            <th>เลขทะเบียน</th>
+            <th>ชื่อสามัญ/สูตร</th>
+            <th>ทะเบียน</th>
             <th>ผู้นำเข้า</th>
-            <th>ผู้ผลิต / แหล่งผลิต</th>
+            <th>ผู้ผลิต/แหล่งผลิต</th>
             <th>ผู้จำหน่าย</th>
-            <th>นำเข้า / แบ่งบรรจุ</th>
+            <th>นำเข้า/แบ่งบรรจุ</th>
             <th>วันออกทะเบียน</th>
             <th>วันหมดอายุ</th>
+            <th>สถานะ / หมายเหตุ</th>
           </tr>
         </thead>
         <tbody id="tbody">
-          <!-- ตัวอย่าง row เปล่า (ลบออกเมื่อนำข้อมูลจริงเข้า) -->
-          <tr>
-            <td>1</td>
-            <td>ตัวอย่างผลิตภัณฑ์ A</td>
-            <td>สามัญ X (สูตร: A-B-C)</td>
-            <td>AB-123456</td>
-            <td>บริษัท นำเข้า จำกัด</td>
-            <td>ผู้ผลิต Y, ประเทศ Z</td>
-            <td>ตัวแทนจำหน่าย</td>
-            <td>500 มล. / ขวด 100 มล.</td>
-            <td>2024-06-15</td>
-            <td>2026-06-14</td>
-          </tr>
-          <!-- ถ้าไม่มีข้อมูลจริง ให้มีแถว placeholder -->
+          <tr><td colspan="12" class="mut">—</td></tr>
         </tbody>
       </table>
     </div>
   </div>
+</div>
+
+<!-- Modal: หมายเหตุ -->
+<div id="noteModal" aria-hidden="true">
+  <div id="noteBox" role="dialog" aria-modal="true" aria-label="รายละเอียดหมายเหตุ">
+    <h3 style="margin:0 0 8px">รายละเอียดหมายเหตุ</h3>
+    <p id="noteBrand" style="margin:4px 0; font-weight:600">ชื่อการค้า: —</p>
+    <p id="noteStatus" style="margin:4px 0">สถานะ: —</p>
+    <div id="noteText" style="margin-top:8px; white-space:pre-wrap; color:var(--mut)"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:12px">
+      <button id="closeNote" class="btn">ปิด</button>
+    </div>
+  </div>
+</div>
 
 <script>
-  // Simple client-side search & CSV/Print export (no backend required)
-  const $ = id => document.getElementById(id);
-  const tbody = $('tbody');
+/* ============ Supabase config ============ */
+const SUPABASE_URL = 'https://jlrogimfjmtwdqiuyejj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impscm9naW1mam10d2RxaXV5ZWpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk5NDIyODUsImV4cCI6MjA3NTUxODI4NX0.OvX7qgcIF5aCcLebUEUR_6D2KTUP2pALCjRtHWJ5qZg';
 
-  // Search: filter visible rows by text content
-  $('q').addEventListener('input', ()=> {
-    const q = $('q').value.trim().toLowerCase();
-    const rows = tbody.querySelectorAll('tr');
-    rows.forEach(tr=>{
-      const text = tr.textContent.toLowerCase();
-      tr.style.display = text.includes(q) ? '' : 'none';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const $ = id => document.getElementById(id);
+// WARNING: เตือนล่วงหน้า 2 ปี (730 วัน) แต่จะแสดงเป็นหน่วยปี/เดือน/วัน
+const WARNING_DAYS = 365 * 2; // 730
+
+let CURRENT_CODE = '';
+let FULL_ROWS = [];
+let FILTERED = [];
+
+/* ============ helpers ============ */
+function escapeHtml(s){ return String(s ?? '').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+function highlightAllNotes(text){
+  if(!text) return '-';
+  return escapeHtml(text).replace(/\n/g,'<br>');
+}
+function fmtDateBE(d){
+  if(!d) return '-';
+  const t = new Date(d);
+  if(isNaN(t)) return '-';
+  try{
+    return t.toLocaleDateString('th-TH-u-ca-buddhist', { year:'numeric', month:'short', day:'numeric', timeZone:'Asia/Bangkok' });
+  }catch(e){ return t.toISOString().slice(0,10); }
+}
+
+/* แปลงจำนวนวันเป็นสตริงปี/เดือน/วัน (approx) */
+function humanRemaining(diffDays){
+  if(diffDays === null || diffDays === undefined) return '';
+  if(diffDays < 0) return `หมดอายุแล้ว ${Math.abs(diffDays)} วัน`;
+  // คำนวณโดยประมาณ: 1 ปี = 365 วัน, 1 เดือน ≈ 30 วัน
+  const years = Math.floor(diffDays / 365);
+  let rem = diffDays - years * 365;
+  const months = Math.floor(rem / 30);
+  const days = rem - months * 30;
+
+  const parts = [];
+  if(years > 0) parts.push(`${years} ปี`);
+  if(months > 0) parts.push(`${months} เดือน`);
+  if(years === 0 && months === 0) parts.push(`${days} วัน`); // ถ้ายังไม่ถึงเดือน ให้แสดงวัน
+  return parts.join(' ');
+}
+
+/* แสดงป้ายสถานะโดยใช้คำว่า "ปี" แทนการแสดงเป็นวัน */
+function statusBadge(row){
+  if(row?.status_text) return `<span class="badge warn">${escapeHtml(row.status_text)}</span>`;
+  if(row?.renewed_status){
+    if(row.renewed_status.includes('ไม่ต่อ')) return `<span class="badge exp">ไม่ต่ออายุแล้ว</span>`;
+    if(row.renewed_status.includes('ระหว่าง')||row.renewed_status.includes('อยู่ระหว่าง')) return `<span class="badge warn">อยู่ระหว่างดำเนินการ</span>`;
+    if(row.renewed_status.includes('ดำเนินการแล้ว')) return `<span class="badge ok">ดำเนินการแล้ว</span>`;
+  }
+  const eff = row?.expiry_date ? new Date(row.expiry_date) : null;
+  if(!eff || isNaN(eff)) return `<span class="badge ok">ปกติ</span>`;
+  const diff = Math.ceil((eff - new Date())/86400000);
+  if(diff < 0) return `<span class="badge exp">หมดอายุ</span>`;
+  if(diff <= WARNING_DAYS){
+    const human = humanRemaining(diff);
+    return `<span class="badge warn">เหลือ ${human}</span>`;
+  }
+  const human = humanRemaining(diff);
+  return `<span class="badge ok">เหลือ ${human}</span>`;
+}
+
+/* ============ Render ตาราง ============ */
+function render(q=''){
+  const tb = $('tbody');
+  const rows = FILTERED;
+  if(rows.length === 0){
+    tb.innerHTML = `<tr><td colspan="12" class="mut">ไม่พบรายการที่ตรงกับ “${escapeHtml(q)}”</td></tr>`;
+  }else{
+    tb.innerHTML = rows.map((r,i)=>`
+      <tr>
+        <td>${i+1}</td>
+        <td>${escapeHtml(r.company_name||r.company_code||'-')}</td>
+        <td>${escapeHtml(r.brand_name||'-')}</td>
+        <td>${escapeHtml(r.common_label||'-')}</td>
+        <td>${escapeHtml(r.registration_no||'-')}</td>
+        <td>${escapeHtml(r.importer||'-')}</td>
+        <td>${escapeHtml(r.manufacturer_source||'-')}</td>
+        <td>${escapeHtml(r.distributor||'-')}</td>
+        <td>${escapeHtml(r.packed_volume||'-')}</td>
+        <td>${r.registration_date?fmtDateBE(r.registration_date):'-'}</td>
+        <td>${r.expiry_date?fmtDateBE(r.expiry_date):'-'}</td>
+        <td>
+          ${statusBadge(r)}
+          ${(r.renewed_status||r.renewed_note||r.status_text) ? `<div style="margin-top:6px"><button class="btn-note" data-index="${i}">ดูหมายเหตุ</button></div>` : ''}
+        </td>
+      </tr>
+    `).join('');
+    tb.querySelectorAll('.btn-note').forEach(btn=>{
+      btn.addEventListener('click', ev=>{
+        const idx = Number(ev.currentTarget.getAttribute('data-index'));
+        showNote(rows[idx]);
+      });
     });
-  });
+  }
+  $('count').textContent = `แสดง ${rows.length.toLocaleString('th-TH')} รายการ (ทั้งหมด ${FULL_ROWS.length.toLocaleString('th-TH')})`;
+}
 
-  $('clearBtn').addEventListener('click', ()=>{
-    $('q').value = '';
-    $('q').dispatchEvent(new Event('input'));
-  });
+/* ============ filter / tokenize ============ */
+function normalize(s){
+  return String(s||'').toLowerCase().replace(/[๐-๙]/g, d => '๐๑๒๓๔๕๖๗๘๙'.indexOf(d)).replace(/\s+/g,' ').trim();
+}
 
-  // Export CSV — reads current visible rows
-  function download(filename, text) {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8;' }));
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+function applyFilter(){
+  const raw = $('q').value || '';
+  const tokens = raw.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if(tokens.length === 0){ FILTERED = [...FULL_ROWS]; render(raw); return; }
+  FILTERED = FULL_ROWS.filter(r=>{
+    const hay = normalize([r.company_name, r.brand_name, r.common_label, r.registration_no, r.importer, r.manufacturer_source, r.distributor, r.packed_volume, r.renewed_note, r.renewed_status].join(' '));
+    return tokens.every(t => hay.includes(normalize(t)));
+  });
+  render(raw);
+}
+
+/* ============ load data by code ============
+   NOTE: changed — read company name from companies table directly (no get_company_name_by_code RPC)
+*/
+async function loadCompanyByCode(){
+  if(!CURRENT_CODE) return;
+  $('loading').style.display = 'block';
+  $('err').textContent = '';
+  try{
+    // 1) get company name from companies where plain_code = CURRENT_CODE
+    const { data: comp, error: compErr } = await sb.from('companies').select('name').eq('plain_code', CURRENT_CODE).limit(1).single();
+    if(compErr){
+      // don't fail hard — show friendly message and continue to try portal RPC
+      console.warn('companies select error', compErr);
+    }
+    if(comp && comp.name){
+      $('companyName').textContent = comp.name;
+    } else {
+      // fallback: show the plain code if no name
+      $('companyName').textContent = CURRENT_CODE;
+    }
+
+    // 2) call existing RPC to get rows
+    const res = await sb.rpc('get_company_portal', { p_plain_code: CURRENT_CODE });
+    if(res.error){
+      $('err').textContent = res.error.message || 'ไม่สามารถเรียกข้อมูลได้';
+      $('dataCard').style.display='none';
+      $('loading').style.display = 'none';
+      return;
+    }
+
+    FULL_ROWS = (res.data || []).map(x=>({
+      ...x,
+      // ensure renewed_status exists if backend returns renewed_until
+      renewed_status: x.renewed_status || (x.renewed_until ? 'ดำเนินการแล้ว' : null),
+      // show company_name for table (use comp.name if available)
+      company_name: comp && comp.name ? comp.name : (x.company_code || CURRENT_CODE)
+    }));
+
+    $('err').textContent = '';
+    $('dataCard').style.display = 'block';
+    $('loading').style.display = 'none';
+
+    const qs = new URLSearchParams(location.search);
+    const initQ = qs.get('q') || '';
+    $('q').value = initQ;
+    FILTERED = [...FULL_ROWS];
+    applyFilter();
+  }catch(e){
+    console.error(e);
+    $('err').textContent = e.message || 'เกิดข้อผิดพลาดในการดึงข้อมูล';
+    $('dataCard').style.display = 'none';
+    $('loading').style.display = 'none';
+  }
+}
+
+/* ============ modal note ============ */
+function showNote(row){
+  $('noteBrand').textContent = `ชื่อการค้า: ${row.brand_name || '-'}`;
+  $('noteStatus').textContent = `สถานะ: ${row.renewed_status || row.status_text || '-'}`;
+  const raw = row.renewed_note || '-';
+  $('noteText').innerHTML = highlightAllNotes(raw);
+  $('noteModal').style.display = 'flex';
+}
+
+/* ============ progress detection ============ */
+function isInProgress(row){
+  const s = String(row?.renewed_status || row?.status_text || '').replace(/\s+/g,'').toLowerCase();
+  if(!s) return false;
+  if(s.includes('ไม่ต่ออายุ')) return false;
+  if(s.includes('ดำเนินการแล้ว')) return false;
+  return (
+    s.includes('อยู่ระหว่าง') || s.includes('ระหว่าง') || s.includes('รอตอบ') || s.includes('รอการตอบกลับ') ||
+    s.includes('รอยืนยัน') || s.includes('รอชำระ') || s.includes('รออนุมัติ') || s.includes('กำลัง')
+  );
+}
+
+/* ============ Events ============ */
+document.addEventListener('DOMContentLoaded', ()=>{
+  $('enterBtn').addEventListener('click', async ()=>{
+    const code = $('code').value.trim().toUpperCase();
+    if(!code){ $('err').textContent = 'กรุณาใส่รหัสลูกค้า'; return; }
+    CURRENT_CODE = code;
+    await loadCompanyByCode();
+  });
+  $('code').addEventListener('keydown', e=>{ if(e.key==='Enter') $('enterBtn').click(); });
+  $('refreshBtn').addEventListener('click', loadCompanyByCode);
+  $('q').addEventListener('input', applyFilter);
+  $('clearBtn').addEventListener('click', ()=>{ $('q').value=''; applyFilter(); });
+  $('closeNote').addEventListener('click', ()=> $('noteModal').style.display='none');
+  $('noteModal').addEventListener('click', e=>{ if(e.target.id==='noteModal') $('noteModal').style.display='none'; });
+
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  if(code){
+    $('code').value = code;
+    CURRENT_CODE = code.trim().toUpperCase();
+    loadCompanyByCode();
   }
 
-  function escapeCsvCell(s){
-    if (s === null || s === undefined) return '';
-    const str = String(s);
-    if (/[,"\n\r]/.test(str)) return `"${str.replace(/"/g,'""')}"`;
-    return str;
-  }
-
-  $('exportCsv').addEventListener('click', ()=>{
-    const headers = ['ลำดับ','ชื่อการค้า','ชื่อสามัญ + สูตร','เลขทะเบียน','ผู้นำเข้า','ผู้ผลิต / แหล่งผลิต','ผู้จำหน่าย','นำเข้า / แบ่งบรรจุ','วันออกทะเบียน','วันหมดอายุ'];
-    const rows = [headers];
-    tbody.querySelectorAll('tr').forEach(tr=>{
-      if (tr.style.display === 'none') return; // skip filtered out
-      const cells = Array.from(tr.children).map(td => td.textContent.trim());
-      rows.push(cells.map(escapeCsvCell));
-    });
-    const csv = rows.map(r => r.join(',')).join('\n');
-    const name = `register_${new Date().toISOString().slice(0,10)}.csv`;
-    download(name, csv);
+  $('toSummaryBtn').addEventListener('click', ()=>{
+    const code = ($('code').value || '').trim().toUpperCase();
+    if(!code){ alert('กรุณาใส่รหัสลูกค้าก่อน'); return; }
+    location.href = `summary.html?code=${encodeURIComponent(code)}`;
   });
-
-  // Export PDF via print (user can Save as PDF)
-  $('exportPdf').addEventListener('click', ()=>{
-    window.print();
-  });
-
-  // OPTIONAL: helper to load data from JSON (e.g., when wiring Supabase later)
-  // call fillTable(dataArray) where dataArray is array of objects matching columns
-  function fillTable(data){
-    tbody.innerHTML = '';
-    data.forEach((r, idx) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${idx+1}</td>
-        <td>${escapeHtml(r.brand_name)}</td>
-        <td>${escapeHtml(r.common_label)}</td>
-        <td>${escapeHtml(r.registration_no)}</td>
-        <td>${escapeHtml(r.importer)}</td>
-        <td>${escapeHtml(r.manufacturer_source)}</td>
-        <td>${escapeHtml(r.distributor)}</td>
-        <td>${escapeHtml(r.packed_volume)}</td>
-        <td>${escapeHtml(r.registration_date)}</td>
-        <td>${escapeHtml(r.expiry_date)}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-  }
-
-  function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-
-  // Example: if you want to replace placeholder with real data later, call:
-  // fillTable(myArray);
-
+});
 </script>
 </body>
 </html>
