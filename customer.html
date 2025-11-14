@@ -53,6 +53,8 @@
     input,button{font-size:16px}
     th,td{font-size:16px}
   }
+  .filter-btn{padding:8px 10px; border-radius:10px; cursor:pointer; font-weight:400; background:#f8feff; color:#0e7490; border:1px solid #94d5e5;}
+  .active-filter{background:linear-gradient(135deg,var(--accent),var(--accent2))!important; color:#fff!important; border:1px solid var(--accent)!important; font-weight:700;}
 </style>
 </head>
 <body>
@@ -91,10 +93,13 @@
     </div>
 
     <div class="row" style="margin-top:10px; gap:8px; align-items:center">
-      <div class="mut" style="font-weight:600">ค้นหาด่วน:</div>
-      <div class="spacer"></div>
-      <div id="count" class="mut">—</div>
-    </div>
+      <div class="mut" style="font-weight:600">แสดง:</div>
+            <button id="filterAll" class="btn-ghost filter-btn active-filter">ทั้งหมด</button>
+      <button id="filterImport" class="btn-ghost filter-btn">ทะเบียนนำเข้า</button>
+      <button id="filterRepack" class="btn-ghost filter-btn">ทะเบียนแบ่งบรรจุ</button>
+            <div class="spacer"></div>
+      <div id="count" class="mut">—</div>
+    </div>
 
     <div style="overflow:auto; max-height:56vh; margin-top:12px">
       <table>
@@ -241,18 +246,41 @@ function render(q=''){
 
 /* ============ filter / tokenize ============ */
 function normalize(s){
-  return String(s||'').toLowerCase().replace(/[๐-๙]/g, d => '๐๑๒๓๔๕๖๗๘๙'.indexOf(d)).replace(/\s+/g,' ').trim();
+  return String(s||'').toLowerCase().replace(/[๐-๙]/g, d => '๐๑๒๓๔๕๖๗๘๙'.indexOf(d)).replace(/\s+/g,' ').trim();
 }
 
 function applyFilter(){
-  const raw = $('q').value || '';
-  const tokens = raw.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  if(tokens.length === 0){ FILTERED = [...FULL_ROWS]; render(raw); return; }
-  FILTERED = FULL_ROWS.filter(r=>{
-    const hay = normalize([r.company_name, r.brand_name, r.common_label, r.registration_no, r.importer, r.manufacturer_source, r.distributor, r.packed_volume, r.renewed_note, r.renewed_status].join(' '));
-    return tokens.every(t => hay.includes(normalize(t)));
-  });
-  render(raw);
+  const raw = $('q').value || '';
+  const tokens = raw.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  
+  // 1. กรองตามประเภทของทะเบียนก่อน (IMPORT/REPACK/ALL)
+  let typeFiltered = FULL_ROWS;
+  if (CURRENT_FILTER_TYPE === 'IMPORT') {
+    // กรอง 'นำเข้า' (Packed volume มีคำว่า 'นำเข้า' และไม่รวม 'แบ่งบรรจุ')
+    typeFiltered = FULL_ROWS.filter(r => 
+      normalize(r.packed_volume).includes('นำเข้า') && !normalize(r.packed_volume).includes('แบ่งบรรจุ')
+    );
+  } else if (CURRENT_FILTER_TYPE === 'REPACK') {
+    // กรอง 'แบ่งบรรจุ' (Packed volume มีคำว่า 'แบ่งบรรจุ')
+    typeFiltered = FULL_ROWS.filter(r => 
+      normalize(r.packed_volume).includes('แบ่งบรรจุ')
+    );
+  } 
+  // ถ้า CURRENT_FILTER_TYPE เป็น 'ALL' ก็ใช้ FULL_ROWS ทั้งหมด
+
+  // 2. กรองด้วยข้อความค้นหา (Search Query)
+  if(tokens.length === 0){ 
+    FILTERED = [...typeFiltered]; 
+    render(raw); 
+    return; 
+  }
+  
+  FILTERED = typeFiltered.filter(r=>{
+    const hay = normalize([r.company_name, r.brand_name, r.common_label, r.registration_no, r.importer, r.manufacturer_source, r.distributor, r.packed_volume, r.renewed_note, r.renewed_status].join(' '));
+    return tokens.every(t => hay.includes(normalize(t)));
+  });
+  
+  render(raw);
 }
 
 /* ============ load data by code ============
@@ -330,9 +358,24 @@ function isInProgress(row){
     s.includes('รอยืนยัน') || s.includes('รอชำระ') || s.includes('รออนุมัติ') || s.includes('กำลัง')
   );
 }
-
+/* ============ Filter Type Handlers ============ */
+function setFilterType(type, buttonId){
+  if(CURRENT_FILTER_TYPE === type) return; // ไม่ทำอะไรถ้าประเภทเดิม
+  CURRENT_FILTER_TYPE = type;
+  // อัปเดตสไตล์ปุ่ม
+  document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active-filter'));
+  $(buttonId).classList.add('active-filter');
+  // เรียกใช้การกรองใหม่
+  applyFilter();
+}
 /* ============ Events ============ */
 document.addEventListener('DOMContentLoaded', ()=>{
+  // ... ภายใน DOMContentLoaded
+  $('filterAll').addEventListener('click', ()=> setFilterType('ALL', 'filterAll'));
+  $('filterImport').addEventListener('click', ()=> setFilterType('IMPORT', 'filterImport'));
+  $('filterRepack').addEventListener('click', ()=> setFilterType('REPACK', 'filterRepack'));
+  
+// ...
   $('enterBtn').addEventListener('click', async ()=>{
     const code = $('code').value.trim().toUpperCase();
     if(!code){ $('err').textContent = 'กรุณาใส่รหัสลูกค้า'; return; }
@@ -360,6 +403,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     location.href = `summary.html?code=${encodeURIComponent(code)}`;
   });
 });
+let CURRENT_FILTER_TYPE = 'ALL'; // 'ALL', 'IMPORT', 'REPACK'
 </script>
 </body>
 </html>
