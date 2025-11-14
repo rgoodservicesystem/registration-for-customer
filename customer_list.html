@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>รายการลูกค้า</title>
+
+<script type="module" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
+  body{
+    font-family:"Prompt",sans-serif;
+    background:#f8fbff;
+    margin:0;
+    color:#0f172a;
+  }
+  header{
+    padding:16px;
+    background:linear-gradient(180deg,#f0fbff,#e5f5ff);
+    border-bottom:1px solid #dce7f0;
+    font-size:20px;
+    font-weight:600;
+  }
+  .wrap{
+    max-width:1100px;
+    margin:22px auto;
+    padding:0 16px;
+  }
+  .card{
+    background:#fff;
+    padding:16px;
+    border-radius:12px;
+    border:1px solid #e5eef5;
+    box-shadow:0 4px 20px rgba(0,0,0,.05);
+  }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:14px;
+  }
+  th,td{
+    padding:10px 12px;
+    border-bottom:1px solid #e5eef5;
+    text-align:left;
+  }
+  th{
+    background:#f3f9ff;
+    position:sticky;
+    top:0;
+    z-index:1;
+  }
+  input{
+    padding:10px;
+    border-radius:10px;
+    border:1px solid #d7e3ea;
+    width:280px;
+  }
+  .small{font-size:13px;color:#64748b}
+</style>
+</head>
+
+<body>
+<header>รายชื่อลูกค้า</header>
+
+<div class="wrap">
+  <div class="card">
+    <div style="display:flex;gap:12px;align-items:center">
+      <input id="searchBox" placeholder="ค้นหา: ชื่อลูกค้า / รหัสบริษัท">
+      <div id="count" class="small"></div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:60px">#</th>
+          <th>รหัสบริษัท</th>
+          <th>ชื่อลูกค้า</th>
+          <th>รหัสลูกค้า (plain_code)</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="4" class="small">กำลังโหลด...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+  const SUPABASE_URL = "https://jlrogimfjmtwdqiuyejj.supabase.co";
+  const SUPABASE_ANON_KEY =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impscm9naW1mam10d2RxaXV5ZWpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk5NDIyODUsImV4cCI6MjA3NTUxODI4NX0.OvX7qgcIF5aCcLebUEUR_6D2KTUP2pALCjRtHWJ5qZg";
+
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const $ = id => document.getElementById(id);
+  let allRows = [];
+
+  async function loadCustomers(){
+    const tb = $("tbody");
+    tb.innerHTML = `<tr><td colspan="4" class="small">กำลังโหลด...</td></tr>`;
+
+    const { data, error } = await sb
+      .from("companies")
+      .select("code, name, plain_code")
+      .order("code", { ascending: true });
+
+    if(error){
+      tb.innerHTML = `<tr><td colspan="4" class="small">${error.message}</td></tr>`;
+      return;
+    }
+
+    allRows = data || [];
+    renderTable();
+  }
+
+  function renderTable(){
+    const q = ($("searchBox").value || "").trim().toLowerCase();
+    const tb = $("tbody");
+
+    let rows = allRows;
+
+    if(q){
+      rows = rows.filter(r =>
+        (r.code || "").toLowerCase().includes(q) ||
+        (r.name || "").toLowerCase().includes(q) ||
+        (r.plain_code || "").toLowerCase().includes(q)
+      );
+    }
+
+    if(rows.length === 0){
+      tb.innerHTML = `<tr><td colspan="4" class="small">ไม่พบข้อมูล</td></tr>`;
+      $("count").textContent = "";
+      return;
+    }
+
+    tb.innerHTML = rows
+      .map(
+        (r, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${r.code || ""}</td>
+          <td>${r.name || ""}</td>
+          <td>${r.plain_code || ""}</td>
+        </tr>`
+      )
+      .join("");
+
+    $("count").textContent = `แสดง ${rows.length} บริษัท`;
+  }
+
+  $("searchBox").addEventListener("input", renderTable);
+
+  loadCustomers();
+</script>
+</body>
+</html>
