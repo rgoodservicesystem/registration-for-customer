@@ -95,30 +95,31 @@
     <div class="small" style="margin-top:8px">* double-click ช่องเพื่อแก้ไขแบบ inline</div>
   </div>
 
-  <div class="card" style="overflow:auto; max-height:64vh">
-    <div class="row" style="margin-bottom:8px">
-      <input id="adminSearch" placeholder="ค้นหา: ชื่อการค้า / ชื่อสามัญ / เลขทะเบียน / ผู้นำเข้า ..." style="min-width:360px">
-      <button id="adminClearBtn" class="btn btn-ghost">ล้าง</button>
-      <div style="flex:1"></div>
-      <div id="adminCount" class="small"></div>
-    </div>
+  <div class="card"> 
+  
+  <div class="row" style="margin-bottom:8px">
+    <input id="adminSearch" placeholder="ค้นหา: ชื่อการค้า / ชื่อสามัญ / เลขทะเบียน / ผู้นำเข้า ..." style="min-width:360px">
+    <button id="adminClearBtn" class="btn btn-ghost">ล้าง</button>
+    <div style="flex:1"></div>
+    <div id="adminCount" class="small"></div>
+  </div>
 
-    <div style="display:flex;gap:8px;margin-bottom:8px">
-      <button id="btnSelectAllFiltered" class="btn btn-ghost small">เลือกทั้งหมด (ผลค้นหา)</button>
-      <button id="btnClearSel" class="btn btn-ghost small">ล้างเลือก</button>
-      <button id="btnDeleteSel" class="btn btn-danger small">ลบที่เลือก</button>
-      <div style="flex:1"></div>
-      <button id="btnNotePage" class="btn btn-ghost small">หมายเหตุทั้งหมด</button>
-    </div>
+  <div style="display:flex;gap:8px;margin-bottom:8px">
+    <button id="btnSelectAllFiltered" class="btn btn-ghost small">เลือกทั้งหมด (ผลค้นหา)</button>
+    <button id="btnClearSel" class="btn btn-ghost small">ล้างเลือก</button>
+    <button id="btnDeleteSel" class="btn btn-danger small">ลบที่เลือก</button>
+    <div style="flex:1"></div>
+    <button id="btnNotePage" class="btn btn-ghost small">หมายเหตุทั้งหมด</button>
+  </div>
 
-    <div style="display:flex;gap:8px;margin-left:8px;margin-bottom:8px">
-      <button id="filterAllBtn" class="btn btn-ghost small">ทั้งหมด</button>
-      <button id="filterRegBtn" class="btn btn-ghost small">เฉพาะมีเลขทะเบียน</button>
-      <button id="filterImportBtn" class="btn btn-ghost small">เฉพาะ "นำเข้า"</button>
-      <button id="filterPackBtn" class="btn btn-ghost small">เฉพาะ "แบ่งบรรจุ"</button>
-    </div>
-
-    <table>
+  <div style="display:flex;gap:8px;margin-left:8px;margin-bottom:8px">
+    <button id="filterAllBtn" class="btn btn-ghost small">ทั้งหมด</button>
+    <button id="filterRegBtn" class="btn btn-ghost small">เฉพาะมีเลขทะเบียน</button>
+    <button id="filterImportBtn" class="btn btn-ghost small">เฉพาะ "นำเข้า"</button>
+    <button id="filterPackBtn" class="btn btn-ghost small">เฉพาะ "แบ่งบรรจุ"</button>
+  </div>
+  
+  <div style="overflow-y: auto; max-height: 58vh;"> <table>
       <thead>
         <tr>
           <th style="width:36px"><input id="chkAllVisible" type="checkbox"></th>
