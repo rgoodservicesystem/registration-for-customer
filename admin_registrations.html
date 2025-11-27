@@ -59,6 +59,35 @@
   /* ปรับสีตอน Hover ของพวกที่มีสถานะแล้ว ให้เข้มขึ้นนิดนึงจะได้รู้ว่าชี้อยู่ */
   tr.st-done:hover { background-color: #a7f3d0 !important; }
   tr.st-process:hover { background-color: #fed7aa !important; }
+  /* --- เพิ่มสีสถานะ: เปลี่ยนแหล่งผลิตใหม่ (สีฟ้าสดใส) --- */
+  tr.st-change { background-color: #cffafe !important; } 
+  tr.st-change:hover { background-color: #a5f3fc !important; }
+  /* --- ปรับขนาดป้ายและปุ่ม (เน้นอ่านง่าย สบายตา) --- */
+  
+  /* 1. ป้ายสถานะ (Badge) */
+  .badge {
+    font-size: 13px !important;    /* ขยายกลับมาขนาดปกติ อ่านชัด */
+    padding: 4px 8px !important;   /* ขอบไม่หนาเกินไป */
+    white-space: nowrap;           /* ข้อความยาวแถวเดียว */
+    vertical-align: middle;
+    border-radius: 6px;            /* มุมมนนิดๆ */
+    font-weight: 600;              /* ตัวหนาพอประมาณ */
+    border: 1px solid transparent; /* จองเส้นขอบ */
+  }
+
+  /* 2. สีชมพูสำหรับ "เปลี่ยนแหล่งผลิตใหม่" */
+  .change {
+    color: #9d174d !important;        
+    background: #fce7f3 !important;   
+    border: 1px solid #f472b6 !important; /* เส้นขอบสีชมพูชัดๆ */
+  }
+
+  /* 3. ปุ่มกดในตาราง (Admin) */
+  .btn.small, .btn-ghost.small {
+    font-size: 13px !important;    /* ขยายตัวหนังสือปุ่ม */
+    padding: 4px 8px !important;   /* ขยายพื้นที่กดให้จิ้มง่ายขึ้น */
+    height: auto;
+  }
 </style>
 </head>
 <body>
@@ -300,12 +329,12 @@ function renderTable(q=''){
   const tb = $('tbody');
   if(!filteredRows.length){ tb.innerHTML = `<tr><td colspan="14" class="small">ไม่พบรายการ</td></tr>`; $('adminCount').textContent = ''; return; }
   tb.innerHTML = filteredRows.map((r,i) => {
-    // เช็คสถานะเพื่อเลือกสี
+    // 1. เช็คสถานะเพื่อเลือกสีแถว
     let statusClass = '';
     if (r.renewed_status === 'ดำเนินการแล้ว') statusClass = 'st-done';
     else if (r.renewed_status === 'อยู่ระหว่างดำเนินการ') statusClass = 'st-process';
+    else if (r.renewed_status === 'เปลี่ยนแหล่งผลิตใหม่') statusClass = 'st-change'; // <--- เพิ่มตรงนี้
 
-    // ส่งค่ากลับเป็น HTML
     return `
     <tr class="${r.cls} ${statusClass}">
       <td><input type="checkbox" class="rowchk" data-id="${esc(r.id)}" ${selectedIds.has(r.id)?'checked':''}></td>
@@ -326,14 +355,18 @@ function renderTable(q=''){
         <div style="display:flex; flex-direction:column; gap:4px;">
            <div style="display:flex; align-items:center; gap:2px;">
               <button class="btn btn-ghost small" style="padding:4px 8px;" onclick="openNote('${esc(r.id)}')">📝 จดโน้ต</button>
-              ${ r.renewed_note ? `<button class="btn btn-ghost small" style="padding:4px 6px; color:red; font-size:12px;" onclick="clearNote('${esc(r.id)}')" title="ลบหมายเหตุ">x โน้ต</button>` : '' }
+              ${ r.renewed_note ? `<button class="btn btn-ghost small" style="padding:4px 6px; color:red; font-size:12px;" onclick="clearNote('${esc(r.id)}')" title="ลบหมายเหตุ">x</button>` : '' }
            </div>
+           
            <div style="display:flex; align-items:center; gap:2px;">
               <button class="btn btn-ghost small" style="padding:4px;" title="อยู่ระหว่างดำเนินการ" onclick="setStatus('${esc(r.id)}','อยู่ระหว่างดำเนินการ')">⏳</button>
               <button class="btn btn-primary small" style="padding:4px;" title="ดำเนินการแล้ว" onclick="setStatus('${esc(r.id)}','ดำเนินการแล้ว')">✅</button>
-              <button class="btn btn-ghost small" style="padding:4px; color:#f59e0b;" title="ยกเลิกสถานะ" onclick="clearStatus('${esc(r.id)}')">🚫</button>
+              
+              <button class="btn btn-ghost small" style="padding:4px; color:#0891b2;" title="เปลี่ยนแหล่งผลิตใหม่" onclick="setStatus('${esc(r.id)}','เปลี่ยนแหล่งผลิตใหม่')">🏭</button>
+
               <span style="border-left:1px solid #ddd; margin:0 4px; height:16px;"></span>
-              <button class="btn btn-ghost small" style="padding:4px; color:#b91c1c;" title="ลบรายการนี้" onclick="delDoc('${esc(r.id)}')">🗑️</button>
+              <button class="btn btn-ghost small" style="padding:4px; color:#f59e0b;" title="รีเซ็ตสถานะ" onclick="clearStatus('${esc(r.id)}')">🚫</button>
+              <button class="btn btn-ghost small" style="padding:4px; color:#b91c1c;" title="ลบรายการ" onclick="delDoc('${esc(r.id)}')">🗑️</button>
            </div>
         </div>
       </td>
