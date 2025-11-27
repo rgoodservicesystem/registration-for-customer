@@ -34,6 +34,31 @@
   .ok{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d090}
   .warn{background:#fff7ed;color:#b45309;border:1px solid #fde68a80}
   .exp{background:#fff1f2;color:#b91c1c;border:1px solid #fecaca90}
+/* --- ส่วนไฮไลท์เมื่อเอาเมาส์ชี้ (Hover Effect) --- */
+  tbody tr {
+    transition: background-color 0.15s ease; /* ให้สีค่อยๆ เปลี่ยน นุ่มนวล */
+  }
+  tbody tr:hover {
+    background-color: #e0f2fe; /* เปลี่ยนสีพื้นหลังเป็นสีฟ้าอ่อน */
+    cursor: pointer;           /* เปลี่ยนเมาส์เป็นรูปนิ้วมือ */
+  }
+  
+  /* เพิ่มให้: ถ้ากำลังแก้ไข (editing) ไม่ต้องเปลี่ยนสี */
+  tbody tr:hover td.editing {
+    background-color: #fffbe6;
+    cursor: text;
+  }
+  /* --- สีตามสถานะงาน (Status Colors) --- */
+  
+  /* ถ้าสถานะ: ดำเนินการแล้ว -> สีเขียวมินต์ */
+  tr.st-done { background-color: #d1fae5 !important; }
+  
+  /* ถ้าสถานะ: อยู่ระหว่างดำเนินการ -> สีส้มอ่อน */
+  tr.st-process { background-color: #ffedd5 !important; }
+
+  /* ปรับสีตอน Hover ของพวกที่มีสถานะแล้ว ให้เข้มขึ้นนิดนึงจะได้รู้ว่าชี้อยู่ */
+  tr.st-done:hover { background-color: #a7f3d0 !important; }
+  tr.st-process:hover { background-color: #fed7aa !important; }
 </style>
 </head>
 <body>
@@ -166,7 +191,8 @@ const REG_TABLE = 'product_registrations';
 
 // =============== Helpers ===============
 const $ = id => document.getElementById(id);
-const WARNING_DAYS = 90;
+// แจ้งเตือนล่วงหน้า 2 ปี
+const WARNING_DAYS = 365 * 2; // = 730 วัน
 let currentCompany = '';
 let cachedRows = [];
 let filteredRows = [];
@@ -208,23 +234,80 @@ async function loadDocs(code){
   }catch(e){ console.error(e); $('tbody').innerHTML = `<tr><td colspan="14" class="small">${esc(e.message)}</td></tr>`; }
 }
 
-// =============== classify ===============
-function classify(expiry){
-  if(!expiry) return { cls:'', badge:`<span class="badge ok">ปกติ</span>`, order:3, statusText:'ปกติ' };
-  const eff = new Date(expiry);
-  if(isNaN(eff)) return { cls:'', badge:`<span class="badge ok">ปกติ</span>`, order:3, statusText:'ปกติ' };
-  const diff = Math.ceil((eff - new Date())/86400000);
-  if(diff < 0) return { cls:'expired', badge:`<span class="badge exp">หมดอายุ</span>`, order:1, statusText:'หมดอายุ' };
-  if(diff <= WARNING_DAYS) return { cls:'warning', badge:`<span class="badge warn">เหลือ ${diff} วัน</span>`, order:2, statusText:`เหลือ ${diff} วัน` };
-  return { cls:'', badge:`<span class="badge ok">ปกติ</span>`, order:3, statusText:'ปกติ' };
-}
+// ================= ฟังก์ชันคำนวณวันหมดอายุแบบ ปี/เดือน/วัน =================
+function classify(expiry) {
+    if (!expiry) return { cls: '', badge: `<span class="badge ok">ปกติ</span>`, order: 3, statusText: 'ปกติ' };
 
+    const now = new Date();
+    const eff = new Date(expiry);
+
+    // รีเซ็ตเวลาให้เป็นเที่ยงคืน เพื่อการคำนวณวันที่เป๊ะขึ้น
+    now.setHours(0, 0, 0, 0);
+    eff.setHours(0, 0, 0, 0);
+
+    if (isNaN(eff)) return { cls: '', badge: `<span class="badge ok">ปกติ</span>`, order: 3, statusText: 'ปกติ' };
+
+    // คำนวณระยะห่างรวมเป็น "วัน" เพื่อเช็คเงื่อนไขหมดอายุ/แจ้งเตือน
+    const diffTime = eff.getTime() - now.getTime();
+    const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // 1. กรณีหมดอายุแล้ว
+    if (totalDays < 0) {
+        return { cls: 'expired', badge: `<span class="badge exp">หมดอายุ</span>`, order: 1, statusText: 'หมดอายุ' };
+    }
+
+    // --- คำนวณแยก ปี-เดือน-วัน ---
+    let years = eff.getFullYear() - now.getFullYear();
+    let months = eff.getMonth() - now.getMonth();
+    let days = eff.getDate() - now.getDate();
+
+    // ปรับทดเลข: ถ้าวันติดลบ ให้ไปยืมเดือนก่อนหน้า
+    if (days < 0) {
+        months--;
+        // หาวันสุดท้ายของเดือนก่อนหน้า เพื่อนำมาบวก
+        const prevMonthLastDay = new Date(eff.getFullYear(), eff.getMonth(), 0).getDate();
+        days += prevMonthLastDay;
+    }
+    // ปรับทดเลข: ถ้าเดือนติดลบ ให้ไปยืมปี
+    if (months < 0) {
+        years--;
+        months += 12;
+    }
+
+    // สร้างข้อความที่จะแสดง (Label)
+    let label = '';
+    if (years > 0) {
+        // กรณีเหลือเกิน 1 ปี: แสดง "เหลือ 1 ปี 2 เดือน"
+        label = `เหลือ ${years} ปี ${months} เดือน`;
+    } else if (months > 0) {
+        // กรณีเหลือไม่ถึงปี แต่เกินเดือน: แสดง "เหลือ 5 เดือน 10 วัน"
+        label = `เหลือ ${months} เดือน ${days} วัน`;
+    } else {
+        // กรณีเหลือน้อยกว่า 1 เดือน: แสดง "เหลือ 15 วัน"
+        label = `เหลือ ${days} วัน`;
+    }
+
+    // 2. กรณีอยู่ในระยะแจ้งเตือน (WARNING_DAYS = 730 วัน หรือ 2 ปี)
+    if (totalDays <= WARNING_DAYS) {
+        return { cls: 'warning', badge: `<span class="badge warn">${label}</span>`, order: 2, statusText: label };
+    }
+
+    // 3. กรณีปกติ (อายุยังเหลือเยอะกว่า 2 ปี)
+    return { cls: '', badge: `<span class="badge ok">ปกติ</span>`, order: 3, statusText: 'ปกติ' };
+}
 // =============== render ===============
 function renderTable(q=''){
   const tb = $('tbody');
   if(!filteredRows.length){ tb.innerHTML = `<tr><td colspan="14" class="small">ไม่พบรายการ</td></tr>`; $('adminCount').textContent = ''; return; }
-  tb.innerHTML = filteredRows.map((r,i)=>`
-    <tr class="${r.cls}">
+  tb.innerHTML = filteredRows.map((r,i) => {
+    // เช็คสถานะเพื่อเลือกสี
+    let statusClass = '';
+    if (r.renewed_status === 'ดำเนินการแล้ว') statusClass = 'st-done';
+    else if (r.renewed_status === 'อยู่ระหว่างดำเนินการ') statusClass = 'st-process';
+
+    // ส่งค่ากลับเป็น HTML
+    return `
+    <tr class="${r.cls} ${statusClass}">
       <td><input type="checkbox" class="rowchk" data-id="${esc(r.id)}" ${selectedIds.has(r.id)?'checked':''}></td>
       <td>${i+1}</td>
       <td>${esc(r.company_code||'')}</td>
@@ -237,15 +320,25 @@ function renderTable(q=''){
       <td class="editable" data-id="${esc(r.id)}" data-field="packed_volume">${esc(r.packed_volume||'')}</td>
       <td class="editable" data-id="${esc(r.id)}" data-field="registration_date" data-raw="${esc(toISO(r.registration_date)||'')}">${r.registration_date?fmtDateBE(r.registration_date):''}</td>
       <td class="editable" data-id="${esc(r.id)}" data-field="expiry_date" data-raw="${esc(toISO(r.expiry_date)||'')}">${r.expiry_date?fmtDateBE(r.expiry_date):''}</td>
-      <td>${r.badge}</td>
+      <td>${r.badge} <div style="font-size:12px; color:#555; margin-top:2px;">${esc(r.renewed_status||'')}</div></td>
+      
       <td style="white-space:nowrap">
-        <button class="btn btn-ghost" onclick="openNote('${esc(r.id)}')">📝</button>
-        <button class="btn btn-ghost" onclick="setStatus('${esc(r.id)}','อยู่ระหว่างดำเนินการ')">ระหว่าง</button>
-        <button class="btn btn-primary" onclick="setStatus('${esc(r.id)}','ดำเนินการแล้ว')">ดำเนินการแล้ว</button>
-        <button class="btn btn-ghost" onclick="delDoc('${esc(r.id)}')">ลบ</button>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+           <div style="display:flex; align-items:center; gap:2px;">
+              <button class="btn btn-ghost small" style="padding:4px 8px;" onclick="openNote('${esc(r.id)}')">📝 จดโน้ต</button>
+              ${ r.renewed_note ? `<button class="btn btn-ghost small" style="padding:4px 6px; color:red; font-size:12px;" onclick="clearNote('${esc(r.id)}')" title="ลบหมายเหตุ">x โน้ต</button>` : '' }
+           </div>
+           <div style="display:flex; align-items:center; gap:2px;">
+              <button class="btn btn-ghost small" style="padding:4px;" title="อยู่ระหว่างดำเนินการ" onclick="setStatus('${esc(r.id)}','อยู่ระหว่างดำเนินการ')">⏳</button>
+              <button class="btn btn-primary small" style="padding:4px;" title="ดำเนินการแล้ว" onclick="setStatus('${esc(r.id)}','ดำเนินการแล้ว')">✅</button>
+              <button class="btn btn-ghost small" style="padding:4px; color:#f59e0b;" title="ยกเลิกสถานะ" onclick="clearStatus('${esc(r.id)}')">🚫</button>
+              <span style="border-left:1px solid #ddd; margin:0 4px; height:16px;"></span>
+              <button class="btn btn-ghost small" style="padding:4px; color:#b91c1c;" title="ลบรายการนี้" onclick="delDoc('${esc(r.id)}')">🗑️</button>
+           </div>
+        </div>
       </td>
     </tr>
-  `).join('');
+  `}).join('');
 
   document.querySelectorAll('.rowchk').forEach(chk=>{
     chk.addEventListener('change', (e)=>{
@@ -420,103 +513,150 @@ const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:'', raw:true });
   }catch(e){ alert('Preview ไม่สำเร็จ: '+(e.message||e)); }
 });
 
-// normalize date
-function normalizeDate(v){
-  if(!v && v !== 0) return null;
-  if(v instanceof Date && !isNaN(v)) return v.toISOString().slice(0,10);
-  if(typeof v === 'number' && isFinite(v)){
-  const epoch = new Date(Math.round((v - 25569) * 86400 * 1000));
-  return epoch.toISOString().slice(0,10);
-}
-  if(typeof v === 'string'){
-    let s = v.trim().replace(/\./g,'/').replace(/\s+/g,'');
-    const thnums = {'๐':'0','๑':'1','๒':'2','๓':'3','๔':'4','๕':'5','๖':'6','๗':'7','๘':'8','๙':'9'};
-    s = s.replace(/[๐-๙]/g, ch => thnums[ch] ?? ch);
-    let m = s.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
-    if(m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
-    m = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
-    if(m){
-      let d = parseInt(m[1],10), mo = parseInt(m[2],10), y = parseInt(m[3],10);
-      if(y < 100) y += (y >= 70 ? 1900 : 2000);
-      if(y > 2400) y -= 543;
-      return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+// ================= 1. แก้ไขฟังก์ชัน normalizeDate ให้รองรับ Date Object ดีขึ้น =================
+function normalizeDate(v) {
+    if (!v && v !== 0) return null;
+    
+    // กรณี SheetJS ส่งมาเป็น Date Object (จากการใช้ cellDates: true)
+    if (v instanceof Date && !isNaN(v)) {
+        // ปรับ Timezone ให้เป็น Local Date (ตัดปัญหาเรื่องเวลาเหลื่อมวัน)
+        const offset = v.getTimezoneOffset() * 60000;
+        const localDate = new Date(v.getTime() - offset);
+        return localDate.toISOString().slice(0, 10);
+    }
+
+    // กรณีมาเป็นตัวเลข (Excel Serial Date)
+    if (typeof v === 'number' && isFinite(v)) {
+        const epoch = new Date(Math.round((v - 25569) * 86400 * 1000));
+        return epoch.toISOString().slice(0, 10);
+    }
+
+    // กรณีมาเป็น Text String (dd/mm/yyyy หรือ yyyy-mm-dd)
+    if (typeof v === 'string') {
+        let s = v.trim().replace(/\./g, '/').replace(/\s+/g, '');
+        // แปลงเลขไทยเป็นอารบิก
+        const thnums = { '๐': '0', '๑': '1', '๒': '2', '๓': '3', '๔': '4', '๕': '5', '๖': '6', '๗': '7', '๘': '8', '๙': '9' };
+        s = s.replace(/[๐-๙]/g, ch => thnums[ch] ?? ch);
+
+        // ลองแมตช์ yyyy-mm-dd
+        let m = s.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
+        if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+
+        // ลองแมตช์ d/m/yyyy หรือ d/m/yy
+        m = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
+        if (m) {
+            let d = parseInt(m[1], 10), mo = parseInt(m[2], 10), y = parseInt(m[3], 10);
+            if (y < 100) y += (y >= 70 ? 1900 : 2000); // เดาปี 2 หลัก
+            if (y > 2400) y -= 543; // แปลง พ.ศ. -> ค.ศ.
+            return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        }
     }
     return null;
-  }
-  return null;
 }
-
-function pick(obj, keys){
-  for(const k of keys){
-    for(const kk in obj){
-      if(kk.trim().toLowerCase() === k) return obj[kk];
+// ================= ฟังก์ชัน pick (ต้องมีตัวนี้ถึงจะ Import ได้) =================
+function pick(obj, keys) {
+    if (!obj || typeof obj !== 'object') return '';
+    // วนลูปหา key ที่ตรงกัน (ไม่สนตัวพิมพ์เล็ก/ใหญ่)
+    for (const k of keys) {
+        const searchKey = k.toLowerCase().trim();
+        for (const rawKey in obj) {
+            if (rawKey.toLowerCase().trim() === searchKey) {
+                return obj[rawKey];
+            }
+        }
     }
-  }
-  return '';
+    return '';
 }
+// ================= 2. แก้ไขปุ่ม Import ให้ใช้ cellDates: true และ Log ข้อมูล =================
+$('impBtn').addEventListener('click', async () => {
+    const f = $('fileInput').files[0];
+    if (!f) return alert('กรุณาเลือกไฟล์ก่อนกด Import');
+    if (!currentCompany) return alert('กรุณาเลือกบริษัทก่อนนำเข้า');
 
-// import (client-side to Supabase)
-$('impBtn').addEventListener('click', async ()=>{
-  const f = $('fileInput').files[0]; if(!f) return alert('เลือกไฟล์ก่อน import'); if(!currentCompany) return alert('เลือกบริษัทก่อนนำเข้า');
-  if($('replaceMode').checked && !confirm('ลบข้อมูลเดิมของบริษัทนี้ก่อนนำเข้าหรือไม่?')) return;
-  try{
-    const ab = await f.arrayBuffer();
-    const wb = XLSX.read(ab, { type:'array', raw:true }); // <--- เปลี่ยน
-const ws = wb.Sheets[wb.SheetNames[0]];
-// ต้องอ่านเป็น JSON (Array of Objects) สำหรับ Import
-const rows = XLSX.utils.sheet_to_json(ws, { defval:'', raw:true }); // <--- เพิ่ม raw: true
+    if ($('replaceMode').checked && !confirm('⚠️ คำเตือน: ข้อมูลเดิมของบริษัทนี้จะถูกลบทั้งหมด ยืนยันหรือไม่?')) return;
 
-    const mapped = rows.map(r=>{
-      const brand = pick(r, ['brand_name','ชื่อการค้า','brand']);
-      const common = pick(r, ['common_label','ชื่อสามัญ/สูตร','ชื่อสามัญ','สูตร']);
-      const regno = pick(r, ['registration_no','ทะเบียน','registration']);
-      const importer = pick(r, ['importer','ผู้นำเข้า']);
-      const manu = pick(r, ['manufacturer_source','ผู้ผลิต','แหล่งผลิต']);
-      const distrib = pick(r, ['distributor','ผู้จำหน่าย']);
-      const packed = pick(r, ['packed_volume','นำเข้า/แบ่งบรรจุ','packed_volume']);
-      const regdate = pick(r, ['registration_date','วันออกทะเบียน']);
-      const exp = pick(r, ['expiry_date','วันหมดอายุ','หมดอายุเดิม','expiry_date']);
-      const lic = pick(r, ['license_no','ใบอนุญาต','license_no']);
+    try {
+        const ab = await f.arrayBuffer();
+        
+        // --- จุดที่แก้ไข: ใช้ cellDates: true เพื่อให้อ่านวันที่ได้แม่นยำ ---
+        const wb = XLSX.read(ab, { type: 'array', cellDates: true }); 
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        // ไม่ใช้ raw: true ตรงนี้ เพื่อให้ SheetJS ช่วยจัดการ Type เบื้องต้น
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' }); 
 
-      const registration_date = normalizeDate(regdate);
-      const expiry_date = normalizeDate(exp);
+        console.log('Raw Rows from Excel:', rows.slice(0, 3)); // ดูข้อมูลดิบใน Console (F12)
 
-      return {
+        // --- แก้ไขส่วนการ Map ข้อมูล (ใน impBtn) ---
+
+const mapped = rows.map(r => {
+    const brand = pick(r, ['brand_name', 'ชื่อการค้า', 'brand']);
+    const common = pick(r, ['common_label', 'ชื่อสามัญ/สูตร', 'ชื่อสามัญ', 'สูตร']);
+    const regno = pick(r, ['registration_no', 'เลขทะเบียน', 'ทะเบียน', 'registration']);
+    const importer = pick(r, ['importer', 'ผู้นำเข้า']);
+    const manu = pick(r, ['manufacturer_source', 'ผู้ผลิต', 'แหล่งผลิต']);
+    const distrib = pick(r, ['distributor', 'ผู้จำหน่าย']);
+    const packed = pick(r, ['packed_volume', 'นำเข้า/แบ่งบรรจุ', 'packed_volume']);
+    const regdate = pick(r, ['registration_date', 'วันออกทะเบียน']);
+    const exp = pick(r, ['expiry_date', 'วันหมดอายุ', 'หมดอายุเดิม', 'expiry_date']);
+    
+    // 1. แก้ตรงนี้: ให้หาทั้งคำว่า "หมายเหตุ" และ "ใบอนุญาต" จาก Excel
+    const note = pick(r, ['renewed_note', 'หมายเหตุ', 'Note', 'license_no', 'ใบอนุญาต']);
+
+    const registration_date = normalizeDate(regdate);
+    const expiry_date = normalizeDate(exp);
+
+    return {
         company_code: currentCompany,
-        brand_name: String(brand||'').trim(),
-        common_label: String(common||'').trim(),
-        registration_no: String(regno||'').trim() || null,
-        importer: String(importer||'').trim() || null,
-        manufacturer_source: String(manu||'').trim() || null,
-        distributor: String(distrib||'').trim() || null,
-        packed_volume: String(packed||'').trim() || null,
+        brand_name: String(brand || '').trim(),
+        common_label: String(common || '').trim(),
+        registration_no: String(regno || '').trim() || null,
+        importer: String(importer || '').trim() || null,
+        manufacturer_source: String(manu || '').trim() || null,
+        distributor: String(distrib || '').trim() || null,
+        packed_volume: String(packed || '').trim() || null,
         registration_date: registration_date || null,
         expiry_date: expiry_date || null,
-        license_no: String(lic||'').trim() || null
-      };
-    }).filter(x => x.brand_name && x.common_label);
+        
+        // 2. แก้ตรงนี้: ส่งข้อมูลไปที่ renewed_note แทน license_no
+        renewed_note: String(note || '').trim() || null
+        
+        // (ลบ license_no ทิ้งไปเลยครับ)
+    };
+}).filter(x => x.brand_name && x.common_label);
 
-    if(mapped.length === 0) return alert('ไม่พบแถวที่ถูกต้อง (ต้องมีชื่อการค้า + ชื่อสามัญ/สูตร)');
+        console.log('Mapped Data to Insert:', mapped); // ดูข้อมูลที่จะส่งไป Supabase ใน Console
 
-    if($('replaceMode').checked){
-      const del = await sb.from(REG_TABLE).delete().eq('company_code', currentCompany);
-      if(del.error) throw del.error;
+        if (mapped.length === 0) {
+            return alert('❌ ไม่พบข้อมูลที่ถูกต้อง! \nกรุณาตรวจสอบหัวตารางใน Excel ว่าตรงกับคำว่า: "ชื่อการค้า", "ชื่อสามัญ/สูตร" หรือไม่');
+        }
+
+        // ลบข้อมูลเก่าถ้าเลือก Replace
+        if ($('replaceMode').checked) {
+            const del = await sb.from(REG_TABLE).delete().eq('company_code', currentCompany);
+            if (del.error) throw new Error('ลบข้อมูลเก่าไม่สำเร็จ: ' + del.error.message);
+        }
+
+        // ทยอย Insert ทีละ 500 แถว
+        let successCount = 0;
+        for (let i = 0; i < mapped.length; i += 500) {
+            const chunk = mapped.slice(i, i + 500);
+            const { error } = await sb.from(REG_TABLE).insert(chunk);
+            if (error) {
+                console.error('Insert Error Chunk ' + i, error);
+                throw new Error('บันทึกข้อมูลไม่สำเร็จ: ' + error.message + ' (Check Console)');
+            }
+            successCount += chunk.length;
+        }
+
+        toast(`✅ นำเข้าสำเร็จ ${successCount} รายการ`);
+        loadDocs(currentCompany); // รีโหลดตาราง
+        $('fileInput').value = ''; // เคลียร์ไฟล์
+
+    } catch (err) {
+        console.error('FULL IMPORT ERROR:', err);
+        alert('❌ เกิดข้อผิดพลาด: ' + (err.message || err));
     }
-
-    for(let i=0;i<mapped.length;i+=500){
-      const chunk = mapped.slice(i,i+500);
-      const { error } = await sb.from(REG_TABLE).insert(chunk);
-      if(error) throw error;
-    }
-
-    toast(`นำเข้า ${mapped.length} รายการสำเร็จ`);
-    loadDocs(currentCompany);
-  }catch(err){
-    console.error('IMPORT ERROR', err);
-    alert('นำเข้าไม่สำเร็จ: ' + (err?.message || err));
-  }
 });
-
 // export xlsx
 $('expBtn').addEventListener('click', async ()=>{
   if(!currentCompany) return alert('เลือกบริษัทก่อนส่งออก');
@@ -537,7 +677,28 @@ $('adminClearBtn').addEventListener('click', ()=> { $('adminSearch').value=''; a
 $('btnSelectAllFiltered').addEventListener('click', ()=> filteredRows.forEach(r=> selectedIds.add(r.id)) || renderTable());
 $('btnClearSel').addEventListener('click', ()=> selectedIds.clear() || renderTable());
 $('signOutBtn').addEventListener('click', async ()=> { await sb.auth.signOut(); sessionStorage.removeItem('legacy_admin_key'); location.href = '/admin_login.html'; });
+// ================= ฟังก์ชัน ยกเลิกสถานะ / ลบหมายเหตุ =================
 
+// 1. ฟังก์ชัน ยกเลิกสถานะ (เคลียร์ค่า renewed_status)
+window.clearStatus = async function(id){
+  if(!confirm('ต้องการ "ยกเลิกสถานะ" ของรายการนี้ใช่หรือไม่?')) return;
+  try{
+    // อัปเดตให้เป็น null (ค่าว่าง)
+    const { error } = await sb.from(REG_TABLE).update({ renewed_status: null }).eq('id', id);
+    if(error) throw error;
+    loadDocs(currentCompany); // รีโหลดตาราง
+  }catch(e){ alert('ยกเลิกสถานะไม่สำเร็จ: '+(e.message||e)); }
+};
+
+// 2. ฟังก์ชัน ลบเฉพาะหมายเหตุ (เคลียร์ค่า renewed_note)
+window.clearNote = async function(id){
+  if(!confirm('ต้องการลบข้อความใน "หมายเหตุ" ทิ้งใช่หรือไม่?')) return;
+  try{
+    const { error } = await sb.from(REG_TABLE).update({ renewed_note: null }).eq('id', id);
+    if(error) throw error;
+    loadDocs(currentCompany);
+  }catch(e){ alert('ลบหมายเหตุไม่สำเร็จ: '+(e.message||e)); }
+};
 // start
 document.addEventListener('DOMContentLoaded', async ()=>{
   // legacy key auto-login for dev
