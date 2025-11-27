@@ -79,6 +79,32 @@
     thead th, th, td{padding:10px}
     table{min-width:800px}
   }
+  /* --- ปรับขนาดป้ายและปุ่ม (เน้นอ่านง่าย สบายตา) --- */
+  
+  /* 1. ป้ายสถานะ (Badge) */
+  .badge {
+    font-size: 13px !important;    /* ขยายกลับมาขนาดปกติ อ่านชัด */
+    padding: 4px 8px !important;   /* ขอบไม่หนาเกินไป */
+    white-space: nowrap;           /* ข้อความยาวแถวเดียว */
+    vertical-align: middle;
+    border-radius: 6px;            /* มุมมนนิดๆ */
+    font-weight: 600;              /* ตัวหนาพอประมาณ */
+    border: 1px solid transparent; /* จองเส้นขอบ */
+  }
+
+  /* 2. สีชมพูสำหรับ "เปลี่ยนแหล่งผลิตใหม่" */
+  .change {
+    color: #9d174d !important;        
+    background: #fce7f3 !important;   
+    border: 1px solid #f472b6 !important; /* เส้นขอบสีชมพูชัดๆ */
+  }
+
+  /* 3. ปุ่มกดในตาราง (Admin) */
+  .btn.small, .btn-ghost.small {
+    font-size: 13px !important;    /* ขยายตัวหนังสือปุ่ม */
+    padding: 4px 8px !important;   /* ขยายพื้นที่กดให้จิ้มง่ายขึ้น */
+    height: auto;
+  }
 </style>
 </head>
 <body>
@@ -249,6 +275,8 @@ function humanRemainingExact(diffDays, expiryDate){
 function statusBadge(row){
   if(row?.status_text) return `<span class="badge warn">${escapeHtml(row.status_text)}</span>`;
   if(row?.renewed_status){
+    // >> แทรกตรงนี้ <<
+    if(row.renewed_status.includes('เปลี่ยนแหล่ง')) return `<span class="badge change">เปลี่ยนแหล่งผลิตใหม่</span>`;
     if(row.renewed_status.includes('ไม่ต่อ')) return `<span class="badge exp">ไม่ต่ออายุแล้ว</span>`;
     if(row.renewed_status.includes('ระหว่าง')||row.renewed_status.includes('อยู่ระหว่าง')) return `<span class="badge warn">อยู่ระหว่างดำเนินการ</span>`;
     if(row.renewed_status.includes('ดำเนินการแล้ว')) return `<span class="badge ok">ดำเนินการแล้ว</span>`;
@@ -272,9 +300,20 @@ function render(q=''){
   if(rows.length === 0){
     tb.innerHTML = `<tr><td colspan="12" class="mut">ไม่พบรายการที่ตรงกับ “${escapeHtml(q)}”</td></tr>`;
   }else{
-    tb.innerHTML = rows.map((r,i)=>`
-      <tr>
-        <td style="width:48px">${i+1}</td>
+   // แปะทับส่วน tb.innerHTML ... ของเดิม
+    tb.innerHTML = rows.map((r,i)=> {
+
+      // --- ส่วนที่ 1: หยุดคิดก่อนว่าแถวนี้ต้องใช้สีอะไร ---
+      let rowClass = ''; // สร้างตัวแปรมารอรับชื่อคลาส
+      
+      // เช็คว่าถ้าสถานะมีคำว่า "เปลี่ยนแหล่ง" ให้ตั้งชื่อคลาสเป็น 'row-change'
+      if(r.renewed_status && r.renewed_status.includes('เปลี่ยนแหล่ง')) {
+         rowClass = 'row-change';
+      }
+
+      // --- ส่วนที่ 2: ส่ง HTML กลับไป (สังเกตตรง <tr class="...">) ---
+      return `
+      <tr class="${rowClass}">  <td style="width:48px">${i+1}</td>
         <td>${escapeHtml(r.company_name||r.company_code||'-')}</td>
         <td>${escapeHtml(r.brand_name||'-')}</td>
         <td>${escapeHtml(r.common_label||'-')}</td>
@@ -286,11 +325,18 @@ function render(q=''){
         <td class="mut-cell">${r.registration_date?fmtDateBE(r.registration_date):'-'}</td>
         <td class="mut-cell">${r.expiry_date?fmtDateBE(r.expiry_date):'-'}</td>
         <td>
-          ${statusBadge(r)}
-          ${(r.renewed_status||r.renewed_note||r.status_text) ? `<div style="margin-top:8px"><button class="btn-note" data-index="${i}">ดูหมายเหตุ</button></div>` : ''}
-        </td>
+  ${statusBadge(r)}
+  
+  ${ r.renewed_note && r.renewed_note.trim() !== '' ? `
+      <div style="margin-top:6px; display:block;">
+        <span style="display:inline-block; font-size:13px; color:#334155; background:#f8fafc; padding:4px 10px; border-radius:6px; border:1px solid #e2e8f0; text-align:left;">
+           📝 ${escapeHtml(r.renewed_note.trim())}
+        </span>
+      </div>
+  ` : '' }
+</td>
       </tr>
-    `).join('');
+    `}).join('');
     tb.querySelectorAll('.btn-note').forEach(btn=>{
       btn.addEventListener('click', ev=>{
         const idx = Number(ev.currentTarget.getAttribute('data-index'));
