@@ -6,16 +6,18 @@
 <title>Admin Login — เข้าสู่ระบบ</title>
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#f6fbff;--card:#fff;--mut:#64748b;--accent:#0ea5a5;--accent2:#60a5fa}
-  body{font-family:"Prompt",sans-serif;background:var(--bg);margin:0;display:flex;align-items:center;justify-content:center;height:100vh;color:#0f172a}
+  :root{--bg:#f6fbff;--card:#fff;--mut:#64748b;--accent:#0ea5a5;--accent2:#60a5fa;--danger:#ef4444}
+  body{font-family:"Prompt",sans-serif;background:var(--bg);margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;color:#0f172a}
   .box{width:420px;background:var(--card);border-radius:12px;padding:22px;box-shadow:0 12px 36px rgba(10,30,60,.09)}
   h2{margin:0 0 8px;font-size:20px}
   label{display:block;margin-top:10px;color:var(--mut);font-size:13px}
-  input{width:100%;padding:10px;border-radius:8px;border:1px solid #e6eef5;margin-top:6px;font-size:15px}
+  input{width:100%;padding:10px;border-radius:8px;border:1px solid #e6eef5;margin-top:6px;font-size:15px;box-sizing: border-box;}
   .row{display:flex;gap:8px;margin-top:12px}
-  button{padding:10px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:700;cursor:pointer}
+  button{padding:10px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:700;cursor:pointer;flex:1;}
+  button:hover{opacity:0.9;}
   .btn-ghost{background:#fff;border:1px solid #d6eef3;color:#0b6b6b}
-  .small{font-size:13px;color:var(--mut);margin-top:10px}
+  .btn-danger{background:var(--danger);color:white;margin-top:20px;font-size:12px;width:100%;}
+  .small{font-size:13px;color:var(--mut);margin-top:10px;min-height: 20px;}
   .warn{font-size:13px;color:#b45309;margin-top:10px}
   .flex-between{display:flex;justify-content:space-between;align-items:center}
   .note{font-size:12px;color:#64748b;margin-top:8px}
@@ -24,124 +26,116 @@
 <body>
   <div class="box" role="main" aria-label="Admin Login">
     <h2>เข้าสู่ระบบผู้ดูแล (Admin)</h2>
-    <p class="note">เลือกวิธีล็อกอิน: (1) อีเมล + รหัสผ่าน (ผ่าน Supabase Auth) หรือ (2) วาง legacy admin key สำหรับการทดสอบ/พัฒนา</p>
+    <p class="note">ระบบจัดการหลังบ้านสำหรับผู้ดูแล</p>
 
-    <!-- Supabase email/password -->
     <label for="email">Email</label>
-    <input id="email" type="email" placeholder="you@example.com" autocomplete="email">
+    <input id="email" type="email" placeholder="admin@example.com" autocomplete="email">
 
     <label for="password">Password</label>
     <input id="password" type="password" placeholder="รหัสผ่าน" autocomplete="current-password">
 
     <div class="row">
-      <button id="signInBtn">Sign in</button>
-      <button id="magicBtn" class="btn-ghost">Sign in (magic link)</button>
-    </div>
+      <button id="signInBtn">เข้าสู่ระบบ</button>
+      </div>
 
     <div class="small" id="authMsg" aria-live="polite"></div>
 
     <hr style="margin:16px 0;border:none;border-top:1px solid #eef6fb">
 
-    <!-- Legacy admin key -->
-    <label for="adminKey">Legacy admin key (development)</label>
-    <input id="adminKey" type="text" placeholder="วางคีย์ที่นี่เพื่อเข้าสู่ระบบ" autocomplete="off">
+    <label for="adminKey">Legacy admin key (Testing)</label>
+    <input id="adminKey" type="text" placeholder="Admin Key" autocomplete="off">
 
     <div class="row" style="margin-top:8px">
-      <button id="useKeyBtn">ใช้คีย์นี้ (Set & Open Admin)</button>
-      <button id="pasteBtn" class="btn-ghost">วางจากคลิปบอร์ด</button>
+      <button id="useKeyBtn" class="btn-ghost">ใช้ Key นี้</button>
+      <button id="pasteBtn" class="btn-ghost" style="flex:0 0 auto; width:auto;">วาง</button>
     </div>
 
-    <div class="flex-between" style="margin-top:10px">
-      <div class="note">คีย์จะเก็บใน <code>sessionStorage</code> ชั่วคราว</div>
-      <div class="warn">อย่าเปิดเผยคีย์นี้สู่สาธารณะ</div>
-    </div>
-
-    <div style="margin-top:12px" class="small">ถ้าต้องการให้ระบบจำคีย์ข้าม session ให้แก้โค้ดเพื่อใช้ <code>localStorage</code> แทน (ไม่แนะนำในสภาพแวดล้อมสาธารณะ)</div>
+    <button id="resetBtn" class="btn-danger">⚠️ ล้างค่า Session / Reset (กดเมื่อเข้าไม่ได้)</button>
   </div>
 
 <script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+// --- แก้ไข: ใช้ลิงก์ใหม่ที่เสถียร ---
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// --- Supabase config (ANON key) ---
+// --- Supabase config ---
 const SUPABASE_URL = 'https://jlrogimfjmtwdqiuyejj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impscm9naW1mam10d2RxaXV5ZWpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk5NDIyODUsImV4cCI6MjA3NTUxODI4NX0.OvX7qgcIF5aCcLebUEUR_6D2KTUP2pALCjRtHWJ5qZg';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // --- helpers ---
 const $ = id => document.getElementById(id);
-const adminRedirect = () => { location.href = 'admin_registrations.html'; };
+
+// ** สำคัญ: ไฟล์หลักต้องชื่อ admin_registrations.html นะครับ ถ้าชื่ออื่นให้แก้ตรงนี้ **
+const adminRedirect = () => { location.href = 'admin_registrations.html'; }; 
+
 const showMsg = (m, ok=true) => {
   const el = $('authMsg');
   el.textContent = m;
   el.style.color = ok ? '#065f46' : '#b91c1c';
 };
 
-// --- Email + password sign-in ---
+// --- 1. Email Login ---
 $('signInBtn').addEventListener('click', async () => {
   const email = $('email').value.trim();
   const password = $('password').value;
+  
   if (!email || !password) { showMsg('กรุณากรอกอีเมลและรหัสผ่าน', false); return; }
-  showMsg('กำลังเข้าสู่ระบบ...');
+  
+  showMsg('กำลังตรวจสอบ...');
   try {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) { showMsg('ล้มเหลว: ' + error.message, false); return; }
-    // สำเร็จ -> redirect
-    showMsg('ล็อกอินสำเร็จ กำลังเข้าสู่หน้าแอดมิน...');
-    // optionally store token? we rely on supabase client session
-    setTimeout(adminRedirect, 600);
+    if (error) throw error;
+    
+    showMsg('สำเร็จ! กำลังเปลี่ยนหน้า...', true);
+    setTimeout(adminRedirect, 1000);
   } catch (e) {
-    showMsg('เกิดข้อผิดพลาด: ' + (e.message || e), false);
+    console.error(e);
+    showMsg('เข้าสู่ระบบไม่ผ่าน: ' + (e.message || e), false);
   }
 });
 
-// magic link (ส่งลิงก์เข้าสู่ระบบ) — ตัวเลือก
-$('magicBtn').addEventListener('click', async () => {
-  const email = $('email').value.trim();
-  if (!email) { showMsg('กรุณากรอกอีเมลเพื่อรับลิงก์', false); return; }
-  showMsg('กำลังส่งลิงก์เข้าสู่ระบบไปยังอีเมล...');
-  try {
-    const { data, error } = await supabase.auth.signInWithOtp({ email });
-    if (error) { showMsg('ส่งไม่สำเร็จ: ' + error.message, false); return; }
-    showMsg('ส่งลิงก์เข้าสู่ระบบแล้ว โปรดตรวจสอบอีเมลของคุณ');
-  } catch (e) {
-    showMsg('เกิดข้อผิดพลาด: ' + (e.message || e), false);
-  }
-});
-
-// --- Legacy admin key: paste & use ---
+// --- 2. Key Login ---
 $('pasteBtn').addEventListener('click', async () => {
   try {
     const text = await navigator.clipboard.readText();
     $('adminKey').value = text;
-    showMsg('วางจากคลิปบอร์ดแล้ว');
-  } catch (e) {
-    showMsg('ไม่สามารถอ่านคลิปบอร์ดได้: ' + (e.message || e), false);
-  }
+  } catch (e) { showMsg('อ่านคลิปบอร์ดไม่ได้', false); }
 });
 
 $('useKeyBtn').addEventListener('click', () => {
   const key = $('adminKey').value.trim();
-  if (!key) { showMsg('กรุณาวาง/พิมพ์ admin key ก่อน', false); return; }
+  if (!key) { showMsg('กรุณาใส่ Key', false); return; }
 
-  // เก็บไว้ใน sessionStorage (ชั่วคราว) — ปลอดภัยกว่า localStorage ในแง่ไม่คงคีย์ข้าม browser sessions
-  try {
-    sessionStorage.setItem('legacy_admin_key', key);
-    showMsg('บันทึกคีย์ใน session แล้ว กำลังไปยังหน้าแอดมิน...');
-    setTimeout(adminRedirect, 400);
-  } catch (e) {
-    showMsg('ไม่สามารถบันทึกคีย์: ' + (e.message || e), false);
-  }
+  // บันทึกและไปต่อ
+  sessionStorage.setItem('legacy_admin_key', key);
+  showMsg('บันทึก Key แล้ว...', true);
+  setTimeout(adminRedirect, 500);
 });
 
-// --- Auto-redirect if already have key (sessionStorage) ---
-(function() {
-  const exist = sessionStorage.getItem('legacy_admin_key');
-  if (exist) {
-    // มีคีย์อยู่แล้ว ให้ไปหน้าแอดมินทันที
-    // แต่ไม่ redirect ถ้าต้องการให้ผู้ใช้ยืนยันอีกครั้ง — ตอนนี้เราทำ redirect อัตโนมัติ
-    setTimeout(() => {
-      adminRedirect();
-    }, 300);
+// --- 3. Reset Button (แก้ปัญหาค้าง/ลูป) ---
+$('resetBtn').addEventListener('click', async () => {
+  sessionStorage.clear(); // ล้าง Key
+  localStorage.clear();   // ล้างอื่นๆ
+  await supabase.auth.signOut(); // ล้าง Supabase Auth
+  
+  $('email').value = '';
+  $('password').value = '';
+  $('adminKey').value = '';
+  showMsg('ล้างค่าเรียบร้อย คุณสามารถลองล็อกอินใหม่ได้', true);
+});
+
+// เช็คสถานะเบื้องต้น (แต่ไม่ Redirect อัตโนมัติ เพื่อกันลูป)
+(async function() {
+  // เช็ค Supabase Session
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    showMsg('ตรวจพบการล็อกอินค้างอยู่ (Supabase) - กดปุ่มล็อกอินเพื่อไปต่อได้เลย', true);
+  }
+  
+  // เช็ค Legacy Key
+  if (sessionStorage.getItem('legacy_admin_key')) {
+    showMsg('ตรวจพบ Key เดิมค้างอยู่ - กด "ใช้ Key นี้" เพื่อไปต่อ หรือกด Reset ด้านล่าง', true);
+    $('adminKey').value = sessionStorage.getItem('legacy_admin_key');
   }
 })();
 </script>
