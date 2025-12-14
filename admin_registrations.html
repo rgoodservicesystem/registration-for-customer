@@ -5,9 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Admin Portal — ใบอนุญาตทะเบียน (Import)</title>
 
-<!-- Supabase JS (ESM) -->
-<script type="module" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm"></script>
-<!-- SheetJS สำหรับ Excel -->
+<script type="module" src="https://esm.sh/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700&display=swap" rel="stylesheet">
@@ -93,7 +91,7 @@
 <body>
 <header>
   <div style="max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:12px">
-    <div style="font-weight:700">Admin Portal — ใบอนุญาตทะเบียน</div>
+    <div style="font-weight:700">Admin Portal — ใบอนุญาตทะเบียน (Import)</div>
     <div style="flex:1"></div>
     <button id="signOutBtn" class="btn btn-ghost">Sign out</button>
   </div>
@@ -117,10 +115,8 @@
     <div class="row">
       <button id="tplBtn" class="btn btn-ghost">ดาวน์โหลดเทมเพลต (.xlsx)</button>
 
-      <!-- file chooser (ซ่อน) -->
       <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none">
 
-      <!-- ปุ่มเปิด chooser -->
       <button id="chooseFileBtn" class="btn btn-ghost">เลือกรายการไฟล์</button>
 
       <button id="previewBtn" class="btn btn-ghost">Preview</button>
@@ -197,7 +193,6 @@
   </div>
 </div>
 
-<!-- note modal -->
 <div id="noteModal" class="modal"><div class="modal-box"><div style="display:flex;justify-content:space-between;align-items:center">
   <strong>หมายเหตุ</strong><button id="closeNote" class="btn btn-ghost">ปิด</button></div>
   <textarea id="noteText" style="width:100%;min-height:140px;margin-top:8px"></textarea>
@@ -205,7 +200,8 @@
 </div></div>
 
 <script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+// --- แก้ไข: ใช้ลิงก์ esm.sh เพื่อความเสถียร ---
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // ================= CONFIG (แก้ถ้าจำเป็น) =================
 const SUPABASE_URL = 'https://jlrogimfjmtwdqiuyejj.supabase.co';
@@ -535,10 +531,10 @@ $('previewBtn').addEventListener('click', async ()=>{
   try{
     const ab = await f.arrayBuffer();
     const wb = XLSX.read(ab, { type:'array', raw:true }); // <--- เพิ่ม raw: true
-const ws = wb.Sheets[wb.SheetNames[0]];
-// ต้องระบุ header: 1 เพื่อให้อ่านเป็น Array of Arrays สำหรับ Preview
-const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:'', raw:true }); 
-// หากต้องการแสดงผลที่ถูกต้อง คุณอาจต้องใช้ { header: 1 } สำหรับ preview
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    // ต้องระบุ header: 1 เพื่อให้อ่านเป็น Array of Arrays สำหรับ Preview
+    const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:'', raw:true }); 
+    // หากต้องการแสดงผลที่ถูกต้อง คุณอาจต้องใช้ { header: 1 } สำหรับ preview
     const table = document.createElement('table'); table.style.width='100%'; table.border=1;
     rows.slice(0,11).forEach((r)=>{ const tr = table.insertRow(); r.forEach(c=>{ const td = tr.insertCell(); td.textContent = c; }); });
     const pa = $('previewArea'); pa.innerHTML=''; pa.appendChild(table);
@@ -621,41 +617,41 @@ $('impBtn').addEventListener('click', async () => {
 
         // --- แก้ไขส่วนการ Map ข้อมูล (ใน impBtn) ---
 
-const mapped = rows.map(r => {
-    const brand = pick(r, ['brand_name', 'ชื่อการค้า', 'brand']);
-    const common = pick(r, ['common_label', 'ชื่อสามัญ/สูตร', 'ชื่อสามัญ', 'สูตร']);
-    const regno = pick(r, ['registration_no', 'เลขทะเบียน', 'ทะเบียน', 'registration']);
-    const importer = pick(r, ['importer', 'ผู้นำเข้า']);
-    const manu = pick(r, ['manufacturer_source', 'ผู้ผลิต', 'แหล่งผลิต']);
-    const distrib = pick(r, ['distributor', 'ผู้จำหน่าย']);
-    const packed = pick(r, ['packed_volume', 'นำเข้า/แบ่งบรรจุ', 'packed_volume']);
-    const regdate = pick(r, ['registration_date', 'วันออกทะเบียน']);
-    const exp = pick(r, ['expiry_date', 'วันหมดอายุ', 'หมดอายุเดิม', 'expiry_date']);
-    
-    // 1. แก้ตรงนี้: ให้หาทั้งคำว่า "หมายเหตุ" และ "ใบอนุญาต" จาก Excel
-    const note = pick(r, ['renewed_note', 'หมายเหตุ', 'Note', 'license_no', 'ใบอนุญาต']);
+        const mapped = rows.map(r => {
+            const brand = pick(r, ['brand_name', 'ชื่อการค้า', 'brand']);
+            const common = pick(r, ['common_label', 'ชื่อสามัญ/สูตร', 'ชื่อสามัญ', 'สูตร']);
+            const regno = pick(r, ['registration_no', 'เลขทะเบียน', 'ทะเบียน', 'registration']);
+            const importer = pick(r, ['importer', 'ผู้นำเข้า']);
+            const manu = pick(r, ['manufacturer_source', 'ผู้ผลิต', 'แหล่งผลิต']);
+            const distrib = pick(r, ['distributor', 'ผู้จำหน่าย']);
+            const packed = pick(r, ['packed_volume', 'นำเข้า/แบ่งบรรจุ', 'packed_volume']);
+            const regdate = pick(r, ['registration_date', 'วันออกทะเบียน']);
+            const exp = pick(r, ['expiry_date', 'วันหมดอายุ', 'หมดอายุเดิม', 'expiry_date']);
+            
+            // 1. แก้ตรงนี้: ให้หาทั้งคำว่า "หมายเหตุ" และ "ใบอนุญาต" จาก Excel
+            const note = pick(r, ['renewed_note', 'หมายเหตุ', 'Note', 'license_no', 'ใบอนุญาต']);
 
-    const registration_date = normalizeDate(regdate);
-    const expiry_date = normalizeDate(exp);
+            const registration_date = normalizeDate(regdate);
+            const expiry_date = normalizeDate(exp);
 
-    return {
-        company_code: currentCompany,
-        brand_name: String(brand || '').trim(),
-        common_label: String(common || '').trim(),
-        registration_no: String(regno || '').trim() || null,
-        importer: String(importer || '').trim() || null,
-        manufacturer_source: String(manu || '').trim() || null,
-        distributor: String(distrib || '').trim() || null,
-        packed_volume: String(packed || '').trim() || null,
-        registration_date: registration_date || null,
-        expiry_date: expiry_date || null,
-        
-        // 2. แก้ตรงนี้: ส่งข้อมูลไปที่ renewed_note แทน license_no
-        renewed_note: String(note || '').trim() || null
-        
-        // (ลบ license_no ทิ้งไปเลยครับ)
-    };
-}).filter(x => x.brand_name && x.common_label);
+            return {
+                company_code: currentCompany,
+                brand_name: String(brand || '').trim(),
+                common_label: String(common || '').trim(),
+                registration_no: String(regno || '').trim() || null,
+                importer: String(importer || '').trim() || null,
+                manufacturer_source: String(manu || '').trim() || null,
+                distributor: String(distrib || '').trim() || null,
+                packed_volume: String(packed || '').trim() || null,
+                registration_date: registration_date || null,
+                expiry_date: expiry_date || null,
+                
+                // 2. แก้ตรงนี้: ส่งข้อมูลไปที่ renewed_note แทน license_no
+                renewed_note: String(note || '').trim() || null
+                
+                // (ลบ license_no ทิ้งไปเลยครับ)
+            };
+        }).filter(x => x.brand_name && x.common_label);
 
         console.log('Mapped Data to Insert:', mapped); // ดูข้อมูลที่จะส่งไป Supabase ใน Console
 
