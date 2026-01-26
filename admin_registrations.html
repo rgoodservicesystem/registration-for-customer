@@ -148,12 +148,21 @@
   <div class="card"> 
   
   <div class="row" style="margin-bottom:8px">
-    <input id="adminSearch" placeholder="ค้นหา: ชื่อการค้า / ชื่อสามัญ / เลขทะเบียน / ผู้นำเข้า ..." style="min-width:360px">
-    <button id="adminClearBtn" class="btn btn-ghost">ล้าง</button>
-    <div style="flex:1"></div>
-    <div id="adminCount" class="small"></div>
-  </div>
-
+<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+  <span class="small" style="font-weight:700">ปีทะเบียน (พ.ศ.):</span>
+  <select id="yearFilter" style="width:120px; border-color:var(--accent)">
+    <option value="all">ทั้งหมด</option>
+    <option value="2025">2568</option>
+    <option value="2026">2569</option>
+    <option value="2024">2567</option>
+  </select>
+  
+  <input id="adminSearch" placeholder="ค้นหา: ชื่อการค้า / ชื่อสามัญ / เลขทะเบียน / ผู้นำเข้า ..." style="min-width:360px">
+  <button id="adminClearBtn" class="btn btn-ghost">ล้าง</button>
+  <div style="flex:1"></div>
+  <div id="adminCount" class="small"></div>
+</div>
+    
   <div style="display:flex;gap:8px;margin-bottom:8px">
     <button id="btnSelectAllFiltered" class="btn btn-ghost small">เลือกทั้งหมด (ผลค้นหา)</button>
     <button id="btnClearSel" class="btn btn-ghost small">ล้างเลือก</button>
@@ -384,15 +393,29 @@ function renderTable(q=''){
 // =============== filter logic ===============
 function applyFilter(){
   const q = ($('adminSearch').value||'').trim().toLowerCase();
-  if(!q){ filteredRows = [...cachedRows]; renderTable(); return; }
-  const toks = q.split(/\s+/).filter(Boolean);
-  filteredRows = cachedRows.filter(r=>{
-    const hay = [r.brand_name,r.common_label,r.registration_no,r.importer,r.manufacturer_source,r.distributor,r.packed_volume].join(' ').toLowerCase();
-    return toks.every(t => hay.includes(t));
-  });
-  renderTable(q);
-}
+  const selectedYear = $('yearFilter').value; // 🟢 ดึงปีที่เลือกจากหน้าจอ
 
+  const toks = q.split(/\s+/).filter(Boolean);
+  
+  filteredRows = cachedRows.filter(r => {
+    // 1. กรองตามคำค้นหา (เหมือนเดิม)
+    const hay = [r.brand_name, r.common_label, r.registration_no, r.importer, r.manufacturer_source, r.distributor, r.packed_volume].join(' ').toLowerCase();
+    const matchesSearch = toks.every(t => hay.includes(t));
+
+    // 2. 🟢 กรองตามปีทะเบียน (registration_date)
+    let matchesYear = true;
+    if (selectedYear !== 'all' && r.registration_date) {
+      const regDate = new Date(r.registration_date);
+      matchesYear = regDate.getFullYear().toString() === selectedYear;
+    } else if (selectedYear !== 'all' && !r.registration_date) {
+      matchesYear = false; // ถ้าเลือกปีแต่ข้อมูลไม่มีวันออกทะเบียน ให้ไม่แสดง
+    }
+
+    return matchesSearch && matchesYear;
+  });
+  
+  renderTable();
+}
 // ===== filter buttons: reg/import/pack =====
 $('filterAllBtn').addEventListener('click', ()=>{ filteredRows = [...cachedRows]; renderTable(); });
 $('filterRegBtn').addEventListener('click', ()=>{ filteredRows = cachedRows.filter(r => r.registration_no && r.registration_no.trim() !== ''); renderTable(); });
@@ -728,6 +751,8 @@ window.clearNote = async function(id){
     loadDocs(currentCompany);
   }catch(e){ alert('ลบหมายเหตุไม่สำเร็จ: '+(e.message||e)); }
 };
+// 🟢 สั่งให้กรองข้อมูลใหม่เมื่อเปลี่ยนปีใน Dropdown
+$('yearFilter').addEventListener('change', () => applyFilter());
 // start
 document.addEventListener('DOMContentLoaded', async ()=>{
   // legacy key auto-login for dev
