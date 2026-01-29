@@ -262,7 +262,7 @@ async function loadDocs(code){
   try{
     const { data, error } = await sb.from(REG_TABLE).select('*').eq('company_code', code).order('id',{ascending:true});
     if(error) throw error;
-    cachedRows = (data||[]).map(r=>({ ...r, ...classify(r.expiry_date) }));
+   cachedRows = (data||[]).map(r=>({ ...r, ...classify(r.expiry_date, r.renewed_status) }));
     filteredRows = [...cachedRows];
     renderTable();
     // load plain_code
@@ -272,23 +272,26 @@ async function loadDocs(code){
 }
 
 // ================= ฟังก์ชันคำนวณวันหมดอายุแบบ ปี/เดือน/วัน =================
-function classify(expiry) {
+function classify(expiry, renewedStatus) {
+    // 1. ถ้ามีสถานะพิเศษ (เช่น กำลังต่ออายุ, ดำเนินการแล้ว) ให้ข้ามการเช็กวันหมดอายุแบบปกติ
+    if (renewedStatus && renewedStatus !== '') {
+        // คืนค่าเป็น 'ปกติ' หรือตามสถานะ เพื่อไม่ให้ Badge กลายเป็นสีแดง (Expired)
+        return { cls: 'status-active', badge: `<span class="badge ok">รันระบบอยู่</span>`, order: 3, statusText: renewedStatus };
+    }
+
     if (!expiry) return { cls: '', badge: `<span class="badge ok">ปกติ</span>`, order: 3, statusText: 'ปกติ' };
 
     const now = new Date();
     const eff = new Date(expiry);
-
-    // รีเซ็ตเวลาให้เป็นเที่ยงคืน เพื่อการคำนวณวันที่เป๊ะขึ้น
     now.setHours(0, 0, 0, 0);
     eff.setHours(0, 0, 0, 0);
 
     if (isNaN(eff)) return { cls: '', badge: `<span class="badge ok">ปกติ</span>`, order: 3, statusText: 'ปกติ' };
 
-    // คำนวณระยะห่างรวมเป็น "วัน" เพื่อเช็คเงื่อนไขหมดอายุ/แจ้งเตือน
     const diffTime = eff.getTime() - now.getTime();
     const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    // 1. กรณีหมดอายุแล้ว
+    // กรณีหมดอายุแล้ว และ "ไม่ได้ทำเรื่องต่ออายุ"
     if (totalDays < 0) {
         return { cls: 'expired', badge: `<span class="badge exp">หมดอายุ</span>`, order: 1, statusText: 'หมดอายุ' };
     }
@@ -511,10 +514,20 @@ $('saveNote').addEventListener('click', async ()=>{
 
 window.setStatus = async function(id, statusText){
   try{
-    const { error } = await sb.from(REG_TABLE).update({ renewed_status: statusText, renewed_on: new Date().toISOString() }).eq('id', id);
+    // เมื่อกดเปลี่ยนสถานะ ให้ระบบรับทราบว่า "กำลังทำงานอยู่" 
+    const { error } = await sb.from(REG_TABLE)
+      .update({ 
+        renewed_status: statusText, 
+        renewed_on: new Date().toISOString() 
+      })
+      .eq('id', id);
+      
     if(error) throw error;
-    loadDocs(currentCompany);
-  }catch(e){ alert('อัพเดตสถานะไม่สำเร็จ: '+(e.message||e)); }
+    
+    // โหลดข้อมูลใหม่เพื่อให้ classify ทำงานใหม่
+    loadDocs(currentCompany); 
+    toast('อัปเดตสถานะ: ' + statusText);
+  }catch(e){ alert('อัปเดตไม่สำเร็จ: '+(e.message||e)); }
 };
 
 window.delDoc = async function(id){
@@ -797,6 +810,34 @@ window.loadDocs = loadDocs;
 window.applyFilter = applyFilter;
 window.loadCompanies = loadCompanies;
 
+$('filterActiveBtn').addEventListener('click', () => {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    filteredRows = cachedRows.filter(r => {
+        const isExpired = r.expiry_date && new Date(r.expiry_date) < today;
+        const isRenewing = r.renewed_status === 'อยู่ระหว่างดำเนินการ' || r.renewed_status === 'ดำเนินการแล้ว';
+        const isNotCancel = r.renewed_status !== 'ไม่ต่ออายุ';
+
+        // แสดงผลถ้า: (ยังไม่หมดอายุ OR กำลังต่ออายุอยู่) AND ไม่ได้กดปุ่มยกเลิก
+        return (!isExpired || isRenewing) && isNotCancel;
+    });
+    renderTable();
+});
+$('filterActiveBtn').onclick = () => {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    filteredRows = cachedRows.filter(r => {
+        const isNoRenew = r.renewed_status === 'ไม่ต่ออายุ';
+        const isExpired = r.expiry_date && new Date(r.expiry_date) < today;
+        // ถือว่า Active ถ้า: ไม่ได้กด 'ไม่ต่ออายุ' AND (ยังไม่หมดอายุ OR กำลังต่ออายุอยู่)
+        const isWorking = r.renewed_status === 'อยู่ระหว่างดำเนินการ' || r.renewed_status === 'ดำเนินการแล้ว';
+        
+        return !isNoRenew && (!isExpired || isWorking);
+    });
+    renderTable();
+};
 </script>
 </body>
 </html>
