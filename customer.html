@@ -28,17 +28,16 @@
   .table-wrap { overflow: auto; max-height: 65vh; }
   table { width: 100%; border-collapse: collapse; min-width: 1750px; table-layout: fixed; }
   
-  /* จัดสัดส่วนให้รองรับวันที่เต็มทั้ง 2 ฝั่ง */
-  th:nth-child(1) { width: 45px; }  /* # */
-  th:nth-child(2) { width: 180px; } /* ชื่อการค้า (Sticky) */
-  th:nth-child(3) { width: 220px; } /* ชื่อสามัญ */
-  th:nth-child(4) { width: 140px; } /* เลขทะเบียน */
-  th:nth-child(5) { width: 260px; } /* ผู้นำเข้า & แหล่งผลิต */
-  th:nth-child(6) { width: 180px; } /* ผู้จำหน่าย */
-  th:nth-child(7) { width: 100px; } /* ประเภท */
-  th:nth-child(8) { width: 150px; } /* วันที่ได้รับทะเบียน */
-  th:nth-child(9) { width: 150px; } /* วันหมดอายุ (ขยายเพิ่ม) */
-  th:nth-child(10){ width: 170px; } /* สถานะปัจจุบัน */
+  th:nth-child(1) { width: 45px; }
+  th:nth-child(2) { width: 180px; }
+  th:nth-child(3) { width: 220px; }
+  th:nth-child(4) { width: 140px; }
+  th:nth-child(5) { width: 260px; }
+  th:nth-child(6) { width: 180px; }
+  th:nth-child(7) { width: 100px; }
+  th:nth-child(8) { width: 150px; }
+  th:nth-child(9) { width: 150px; }
+  th:nth-child(10){ width: 220px; }
 
   thead th { background: #f8fafc; padding: 15px; text-align: left; color: var(--mut); font-weight: 600; font-size: 13px; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid #f1f5f9; }
   tbody td { padding: 15px; border-bottom: 1px solid #f1f5f9; font-size: 13.5px; word-wrap: break-word; }
@@ -56,6 +55,7 @@
 
   .date-main { font-weight: 600; color: var(--dark); }
   .date-sub { font-size: 11px; color: var(--mut); margin-top: 2px; }
+
 </style>
 </head>
 <body>
@@ -91,8 +91,10 @@
   <div id="dataSection" style="display:none">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
       <div class="tab-group">
-        <div id="t-active" class="tab active">ยังดำเนินการอยู่</div>
-        <div id="t-norenew" class="tab">ไม่ต่ออายุแล้ว</div>
+        <div id="t-active" class="tab active">ทั้งหมด</div>
+        <div id="t-import" class="tab">ทะเบียนนำเข้า</div>
+        <div id="t-pack" class="tab">ทะเบียนแบ่งบรรจุ</div>
+        <div id="t-norenew" class="tab">ไม่ต่ออายุ</div>
       </div>
       <input id="q" placeholder="🔍 ค้นหา: ชื่อสินค้า, ทะเบียน, พ.ศ. ..." style="padding:10px; border-radius:10px; border:1px solid #cbd5e1; width:350px;">
     </div>
@@ -129,20 +131,56 @@
 
   let RAW_DATA = [], VIEW = 'ACTIVE';
 
-  function getStatus(exp, isNo) {
-    if (isNo) return `<span class="badge" style="color:var(--danger); border:1px solid #fee2e2; background:#fff1f2">ไม่ต่ออายุ</span>`;
+ function getStatus(exp, renewedStatus) {
+    // 1. ถ้ามีสถานะที่ Honey กดจากหน้า Admin ให้โชว์ป้ายตามนั้นเลย
+    if (renewedStatus === 'ดำเนินการแล้ว') {
+      return `<span class="badge bg-ok">✅ ดำเนินการแล้ว</span>`;
+    }
+    if (renewedStatus === 'อยู่ระหว่างดำเนินการ') {
+      return `<span class="badge bg-warn">⏳ กำลังต่ออายุ</span>`;
+    }
+    if (renewedStatus === 'ไม่ต่ออายุ') {
+      return `<span class="badge" style="color:#94a3b8; background:#f1f5f9; border:1px solid #e2e8f0">ไม่ต่ออายุ</span>`;
+    }
+    if (renewedStatus === 'เปลี่ยนแหล่งผลิตใหม่') {
+      return `<span class="badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd">เปลี่ยนแหล่งผลิต</span>`;
+    }
+
+    // 2. ถ้าไม่ได้กดสถานะไว้ ให้คำนวณตามวันหมดอายุปกติ
     if (!exp) return `<span class="badge bg-ok">ปกติ</span>`;
-    const diff = Math.ceil((new Date(exp) - new Date()) / 86400000);
+    
+    const now = new Date();
+    const eff = new Date(exp);
+    now.setHours(0,0,0,0);
+    eff.setHours(0,0,0,0);
+    
+    const diff = Math.ceil((eff - now) / 86400000);
+    
     if (diff < 0) return `<span class="badge bg-exp">หมดอายุ</span>`;
     if (diff <= 730) {
-      const y = Math.floor(diff/365), m = Math.floor((diff%365)/30);
-      return `<span class="badge bg-warn">${y > 0 ? y + ' ปี ' : ''}${m} เดือน</span>`;
+      const y = Math.floor(diff/365);
+      const m = Math.floor((diff%365)/30);
+      let label = y > 0 ? `เหลือ ${y} ปี ${m} เดือน` : `เหลือ ${m} เดือน`;
+      return `<span class="badge bg-warn">${label}</span>`;
     }
+    
     return `<span class="badge bg-ok">ปกติ</span>`;
   }
+function render() {
+    let rows = RAW_DATA;
 
-  function render() {
-    let rows = RAW_DATA.filter(r => (VIEW === 'ACTIVE' ? !r.renewed_status?.includes('ไม่ต่อ') : r.renewed_status?.includes('ไม่ต่อ')));
+    // กรองตามประเภท Tab
+    if (VIEW === 'ACTIVE') {
+      rows = rows.filter(r => r.renewed_status !== 'ไม่ต่ออายุ');
+    } else if (VIEW === 'IMPORT') {
+      rows = rows.filter(r => r.renewed_status !== 'ไม่ต่ออายุ' && r.packed_volume?.includes('นำเข้า'));
+    } else if (VIEW === 'PACK') {
+      rows = rows.filter(r => r.renewed_status !== 'ไม่ต่ออายุ' && r.packed_volume?.includes('แบ่งบรรจุ'));
+    } else if (VIEW === 'NORENEW') {
+      rows = rows.filter(r => r.renewed_status === 'ไม่ต่ออายุ');
+    }
+
+    // กรองด้วย Search
     const q = $('q').value.toLowerCase();
     if (q) {
       rows = rows.filter(r => {
@@ -152,12 +190,10 @@
     }
 
     $('tbody').innerHTML = rows.map((r, i) => {
-      // จัดการวันที่ได้รับทะเบียน
       const regDate = r.registration_date ? new Date(r.registration_date) : null;
       const displayRegDate = regDate ? regDate.toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'numeric' }) : '-';
       const yearRegBE = regDate ? `(พ.ศ. ${regDate.getFullYear() + 543})` : '';
 
-      // จัดการวันหมดอายุ (ทำให้เหมือนกัน)
       const expDate = r.expiry_date ? new Date(r.expiry_date) : null;
       const displayExpDate = expDate ? expDate.toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'numeric' }) : '-';
       const yearExpBE = expDate ? `(พ.ศ. ${expDate.getFullYear() + 543})` : '';
@@ -182,7 +218,14 @@
             <div class="date-main">${displayExpDate}</div>
             <div class="date-sub">${yearExpBE}</div>
           </td>
-          <td>${getStatus(r.expiry_date, r.renewed_status?.includes('ไม่ต่อ'))}</td>
+          <td style="vertical-align: top;">
+    <div>${getStatus(r.expiry_date, r.renewed_status)}</div>
+    ${ r.renewed_note ? 
+        `<div style="color: #64748b; font-size: 11px; margin-top: 6px; padding: 4px 8px; background: #f8fafc; border-radius: 6px; border: 1px dashed #e2e8f0; line-height: 1.4;">
+            <span style="font-weight: 600; color: #0ea5a5;">Note:</span> ${r.renewed_note}
+         </div>` : '' 
+    }
+</td>
         </tr>
       `;
     }).join('');
@@ -213,8 +256,17 @@
 
   $('enterBtn').onclick = load;
   $('q').oninput = render;
-  $('t-active').onclick = () => { VIEW='ACTIVE'; $('t-active').classList.add('active'); $('t-norenew').classList.remove('active'); render(); };
-  $('t-norenew').onclick = () => { VIEW='NORENEW'; $('t-norenew').classList.add('active'); $('t-active').classList.remove('active'); render(); };
+
+  // ตั้งค่าปุ่ม Tabs
+  const tabLogic = { 't-active':'ACTIVE', 't-import':'IMPORT', 't-pack':'PACK', 't-norenew':'NORENEW' };
+  Object.keys(tabLogic).forEach(id => {
+    $(id).onclick = () => {
+      VIEW = tabLogic[id];
+      Object.keys(tabLogic).forEach(tid => $(tid).classList.remove('active'));
+      $(id).classList.add('active');
+      render();
+    };
+  });
 </script>
 </body>
 </html>
