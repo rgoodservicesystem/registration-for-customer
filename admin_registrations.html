@@ -87,6 +87,30 @@
     height: auto;
   }
 
+/* --- เพิ่มเติมสีสถานะให้ชัดเจน --- */
+
+/* ถ้าสถานะ: ไม่ต่ออายุ -> สีเทาเข้มหม่นๆ หรือแดงจางๆ */
+tr.st-cancel { 
+    background-color: #fee2e2 !important; /* สีแดงอ่อนมาก */
+    color: #991b1b; 
+}
+tr.st-cancel:hover { background-color: #fecaca !important; }
+
+/* ถ้าสถานะ: เปลี่ยนแหล่งผลิตใหม่ -> สีฟ้าสดใส */
+tr.st-change { background-color: #cffafe !important; } 
+tr.st-change:hover { background-color: #a5f3fc !important; }
+
+/* ตกแต่งให้แถวที่ "ดำเนินการแล้ว" ดูเด่นด้วยสีเขียว */
+tr.st-done { background-color: #dcfce7 !important; color: #166534; }
+tr.st-done:hover { background-color: #bbf7d0 !important; }
+
+/* ตกแต่งให้แถวที่ "อยู่ระหว่างดำเนินการ" เป็นสีส้ม */
+tr.st-process { background-color: #ffedd5 !important; color: #9a3412; }
+tr.st-process:hover { background-color: #fed7aa !important; }
+.btn-status-active {
+    box-shadow: 0 0 0 2px var(--accent);
+    transform: scale(1.1);
+}
 </style>
 </head>
 <body>
@@ -228,8 +252,8 @@ const REG_TABLE = 'product_registrations';
 
 // =============== Helpers ===============
 const $ = id => document.getElementById(id);
-// แจ้งเตือนล่วงหน้า 2 ปี
-const WARNING_DAYS = 365 * 2; // = 730 วัน
+// แจ้งเตือนล่วงหน้า 3 ปี
+const WARNING_DAYS = 365 * 3; // = 1095 วัน
 let currentCompany = '';
 let cachedRows = [];
 let filteredRows = [];
@@ -237,7 +261,17 @@ const selectedIds = new Set();
 let editingNoteId = null;
 
 function esc(s){ return String(s||'').replace(/[&<>'"]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\\' : '&#39;', '"':'&quot;'}[m]) ); }
-function fmtDateBE(d){ if(!d) return ''; const t=new Date(d); if(isNaN(t)) return ''; try{ return t.toLocaleDateString('th-TH-u-ca-buddhist',{year:'numeric',month:'short',day:'numeric', timeZone:'Asia/Bangkok'}); }catch(e){ return t.toISOString().split('T')[0];} }
+function fmtDateBE(d){ 
+    if(!d) return ''; 
+    const t = new Date(d); 
+    t.setHours(12, 0, 0, 0); // ป้องกันวันที่เคลื่อน
+    if(isNaN(t)) return ''; 
+    try { 
+        return t.toLocaleDateString('th-TH-u-ca-buddhist',{year:'numeric',month:'short',day:'numeric', timeZone:'Asia/Bangkok'}); 
+    } catch(e) { 
+        return t.toISOString().split('T')[0];
+    } 
+}
 function toISO(d){ if(!d) return ''; const t=new Date(d); return isNaN(t)?'':t.toISOString().slice(0,10); }
 function toast(m, ok=true){ $('msg').textContent = m; $('msg').style.color = ok ? '#065f46' : '#b91c1c'; setTimeout(()=>{$('msg').textContent='';}, 3500); }
 
@@ -329,11 +363,11 @@ function classify(expiry, renewedStatus) {
 
     // 2. กรณีอยู่ในระยะแจ้งเตือน (WARNING_DAYS = 730 วัน หรือ 2 ปี)
     if (totalDays <= WARNING_DAYS) {
-        return { cls: 'warning', badge: `<span class="badge warn">${label}</span>`, order: 2, statusText: label };
-    }
+    return { cls: 'warning', badge: `<span class="badge warn">${label}</span>`, order: 2, statusText: label };
+}
 
     // 3. กรณีปกติ (อายุยังเหลือเยอะกว่า 2 ปี)
-    return { cls: '', badge: `<span class="badge ok">ปกติ</span>`, order: 3, statusText: 'ปกติ' };
+    return { cls: '', badge: `<span class="badge ok">ปกติ</span>`, order: 2, statusText: 'ปกติ' };
 }
 // =============== render ===============
 function renderTable(q=''){
@@ -341,13 +375,15 @@ function renderTable(q=''){
   if(!filteredRows.length){ tb.innerHTML = `<tr><td colspan="14" class="small">ไม่พบรายการ</td></tr>`; $('adminCount').textContent = ''; return; }
   tb.innerHTML = filteredRows.map((r,i) => {
     // 1. เช็คสถานะเพื่อเลือกสีแถว
-    let statusClass = '';
-    if (r.renewed_status === 'ดำเนินการแล้ว') statusClass = 'st-done';
-    else if (r.renewed_status === 'อยู่ระหว่างดำเนินการ') statusClass = 'st-process';
-    else if (r.renewed_status === 'เปลี่ยนแหล่งผลิตใหม่') statusClass = 'st-change'; // <--- เพิ่มตรงนี้
-else if (r.renewed_status === 'ไม่ต่ออายุ') statusClass = 'st-cancel'; // <--- เพิ่มบรรทัดนี้
-    return `
-    <tr class="${r.cls} ${statusClass}">
+   let statusClass = '';
+if (r.renewed_status === 'ดำเนินการแล้ว') statusClass = 'st-done';
+else if (r.renewed_status === 'อยู่ระหว่างดำเนินการ') statusClass = 'st-process';
+else if (r.renewed_status === 'เปลี่ยนแหล่งผลิตใหม่') statusClass = 'st-change';
+else if (r.renewed_status === 'ไม่ต่ออายุ') statusClass = 'st-cancel'; 
+return `
+
+<tr class="${r.cls} ${statusClass}"> 
+  
       <td><input type="checkbox" class="rowchk" data-id="${esc(r.id)}" ${selectedIds.has(r.id)?'checked':''}></td>
       <td>${i+1}</td>
       <td>${esc(r.company_code||'')}</td>
@@ -596,37 +632,33 @@ $('previewBtn').addEventListener('click', async ()=>{
 function normalizeDate(v) {
     if (!v && v !== 0) return null;
     
-    // กรณี SheetJS ส่งมาเป็น Date Object (จากการใช้ cellDates: true)
+    // กรณี SheetJS ส่งมาเป็น Date Object
     if (v instanceof Date && !isNaN(v)) {
-        // ปรับ Timezone ให้เป็น Local Date (ตัดปัญหาเรื่องเวลาเหลื่อมวัน)
-        const offset = v.getTimezoneOffset() * 60000;
-        const localDate = new Date(v.getTime() - offset);
-        return localDate.toISOString().slice(0, 10);
+        v.setHours(12, 0, 0, 0); // ล็อคเวลาไว้ที่เที่ยงวันป้องกันวันเคลื่อน
+        return v.toISOString().slice(0, 10);
     }
 
     // กรณีมาเป็นตัวเลข (Excel Serial Date)
     if (typeof v === 'number' && isFinite(v)) {
         const epoch = new Date(Math.round((v - 25569) * 86400 * 1000));
+        epoch.setHours(12, 0, 0, 0); // ป้องกันวันเคลื่อน
         return epoch.toISOString().slice(0, 10);
     }
 
     // กรณีมาเป็น Text String (dd/mm/yyyy หรือ yyyy-mm-dd)
     if (typeof v === 'string') {
         let s = v.trim().replace(/\./g, '/').replace(/\s+/g, '');
-        // แปลงเลขไทยเป็นอารบิก
         const thnums = { '๐': '0', '๑': '1', '๒': '2', '๓': '3', '๔': '4', '๕': '5', '๖': '6', '๗': '7', '๘': '8', '๙': '9' };
         s = s.replace(/[๐-๙]/g, ch => thnums[ch] ?? ch);
 
-        // ลองแมตช์ yyyy-mm-dd
         let m = s.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
         if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
 
-        // ลองแมตช์ d/m/yyyy หรือ d/m/yy
         m = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
         if (m) {
             let d = parseInt(m[1], 10), mo = parseInt(m[2], 10), y = parseInt(m[3], 10);
-            if (y < 100) y += (y >= 70 ? 1900 : 2000); // เดาปี 2 หลัก
-            if (y > 2400) y -= 543; // แปลง พ.ศ. -> ค.ศ.
+            if (y < 100) y += (y >= 70 ? 1900 : 2000);
+            if (y > 2400) y -= 543; // พ.ศ. -> ค.ศ.
             return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         }
     }
