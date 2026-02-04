@@ -13,6 +13,7 @@
     --bg: #f8fafc; --primary: linear-gradient(135deg, #0ea5a5, #14b8a6);
     --danger: #ef4444; --warning: #f59e0b; --ok: #10b981;
     --dark: #0f172a; --ink: #1e293b; --mut: #64748b;
+    --pink: #db2777; /* สีชมพูสำหรับปุ่มต่ออายุ */
   }
 
   body { margin: 0; font-family: "Prompt", sans-serif; color: var(--ink); background: #f1f5f9; min-height: 100vh; }
@@ -52,20 +53,63 @@
   .tab-group { display: flex; background: #e2e8f0; padding: 4px; border-radius: 12px; width: fit-content; }
   .tab { padding: 8px 16px; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--mut); transition: 0.2s; }
   .tab.active { background: white; color: var(--dark); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+  
+  /* ตกแต่งพิเศษให้ Tab ต่ออายุ */
+  #t-done.active { background: var(--pink); color: white; }
 
   .date-main { font-weight: 600; color: var(--dark); }
   .date-sub { font-size: 11px; color: var(--mut); margin-top: 2px; }
 
+  /* สไตล์ปุ่มเปลี่ยนภาษาแบบชัดเจน */
+  .lang-box {
+    display: flex; align-items: center; background: white; border: 2px solid var(--dark); 
+    border-radius: 10px; padding: 2px 8px; height: 40px;
+  }
+  .lang-box select { 
+    border: none; outline: none; font-family: "Prompt"; font-weight: 700; cursor: pointer; background: transparent;
+  }
+/* ปรับแต่ง Badge เพิ่มเติม */
+  .badge { 
+    padding: 6px 12px; 
+    border-radius: 99px; /* ปรับให้เป็นทรงแคปซูลจะดูทันสมัยกว่า */
+    font-weight: 600; 
+    font-size: 12px; 
+    display: inline-block; 
+    text-align: center; 
+    min-width: 120px;
+    border: 1px solid transparent; 
+  }
+
+  .badge { 
+    padding: 6px 14px; 
+    border-radius: 99px; /* ทรงแคปซูล */
+    font-weight: 700; 
+    font-size: 12px; 
+    white-space: nowrap; 
+    display: inline-block; 
+    text-align: center; 
+    min-width: 130px; /* ขยายให้กว้างขึ้นนิดหน่อยเพื่อให้ข้อความไม่เบียด */
+    transition: all 0.2s;
+  }
 </style>
 </head>
 <body>
 
 <div class="wrap">
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap: wrap; gap: 15px;">
     <h1 style="margin:0; font-size:24px; font-weight:800; color:var(--dark);">📋 Registration Smart Monitor</h1>
-    <div style="display:flex; gap:10px;">
-      <input id="code" placeholder="รหัสลูกค้า..." style="padding:10px; border-radius:10px; border:1px solid #cbd5e1; width:180px;">
-      <button id="enterBtn" style="background:var(--dark); color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer; font-weight:600;">เรียกดูข้อมูล</button>
+    
+    <div style="display:flex; gap:10px; align-items: center;">
+      <div class="lang-box">
+        <span style="font-size: 18px; margin-right: 5px;">🌍</span>
+        <select id="langSwitch">
+          <option value="th">TH (ไทย)</option>
+          <option value="en">EN (English)</option>
+        </select>
+      </div>
+
+      <input id="code" placeholder="รหัสลูกค้า..." style="padding:10px; border-radius:10px; border:1px solid #cbd5e1; width:180px; height: 40px; box-sizing: border-box;">
+      <button id="enterBtn" style="background:var(--dark); color:white; border:none; padding:0 20px; height: 40px; border-radius:10px; cursor:pointer; font-weight:600;">เรียกดูข้อมูล</button>
     </div>
   </div>
 
@@ -76,7 +120,7 @@
     </div>
     <div class="stat-card">
       <div class="icon" style="background:var(--warning)">⏳</div>
-      <div><div class="mut" style="font-size:11px">ใกล้หมดอายุ (2 ปี)</div><div id="c-near" style="font-size:24px; font-weight:800">0</div></div>
+      <div><div class="mut" style="font-size:11px">ใกล้หมดอายุ (3 ปี)</div><div id="c-near" style="font-size:24px; font-weight:800">0</div></div>
     </div>
     <div class="stat-card">
       <div class="icon" style="background:var(--danger)">!</div>
@@ -89,13 +133,15 @@
   </div>
 
   <div id="dataSection" style="display:none">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-   <div class="tab-group">
-  <div id="t-active" class="tab active">ทั้งหมด</div>
-  <div id="t-import" class="tab">ทะเบียนนำเข้า</div>
-  <div id="t-pack" class="tab">ทะเบียนแบ่งบรรจุ</div>
-  <div id="t-done" class="tab">กำลังต่ออายุ</div> <div id="t-change" class="tab">เปลี่ยนแหล่งผลิต</div> <div id="t-norenew" class="tab">ไม่ต่ออายุ</div>
-</div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap: wrap; gap: 10px;">
+      <div class="tab-group">
+        <div id="t-active" class="tab active">ทั้งหมด</div>
+        <div id="t-import" class="tab">นำเข้า</div>
+        <div id="t-pack" class="tab">แบ่งบรรจุ</div>
+        <div id="t-done" class="tab">กำลังต่ออายุ</div> 
+        <div id="t-change" class="tab">เปลี่ยนแหล่งผลิต</div> 
+        <div id="t-norenew" class="tab">ไม่ต่ออายุ</div>
+      </div>
       <input id="q" placeholder="🔍 ค้นหา: ชื่อสินค้า, ทะเบียน, พ.ศ. ..." style="padding:10px; border-radius:10px; border:1px solid #cbd5e1; width:350px;">
     </div>
 
@@ -124,6 +170,34 @@
 </div>
 
 <script>
+  const i18n = {
+    th: {
+      title: "📋 ระบบติดตามสถานะทะเบียน",
+      search_placeholder: "รหัสลูกค้า...",
+      btn_load: "เรียกดูข้อมูล",
+      stat_active: "กำลังดำเนินการ",
+      stat_near: "ใกล้หมดอายุ (3 ปี)",
+      stat_exp: "หมดอายุแล้ว",
+      stat_norenew: "ไม่ต่ออายุ",
+      tabs: ["ทั้งหมด", "นำเข้า", "แบ่งบรรจุ", "กำลังต่ออายุ", "เปลี่ยนแหล่งผลิต", "ไม่ต่ออายุ"],
+      search_table: "🔍 ค้นหา: ชื่อสินค้า, ทะเบียน...",
+      cols: ["#", "ชื่อการค้า", "ชื่อสามัญ/สูตร", "เลขทะเบียน", "ผู้นำเข้า & แหล่งผลิต", "ผู้จำหน่าย", "ประเภท", "วันที่ได้รับ", "วันหมดอายุ", "สถานะ"]
+    },
+    en: {
+      title: "📋 Registration Smart Monitor",
+      search_placeholder: "Customer Code...",
+      btn_load: "View Data",
+      stat_active: "In Progress",
+      stat_near: "Expiring Soon (3Y)",
+      stat_exp: "Expired",
+      stat_norenew: "No Renewal",
+      tabs: ["All", "Imported", "Packed", "Renewing", "Source Change", "No Renewal"],
+      search_table: "🔍 Search: Brand, Reg No, Year...",
+      cols: ["#", "Brand Name", "Common Name", "Reg No.", "Importer & Source", "Distributor", "Type", "Reg. Date", "Expiry Date", "Status"]
+    }
+  };
+
+  let currentLang = 'th';
   const SUPABASE_URL = 'https://jlrogimfjmtwdqiuyejj.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impscm9naW1mam10d2RxaXV5ZWpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk5NDIyODUsImV4cCI6MjA3NTUxODI4NX0.OvX7qgcIF5aCcLebUEUR_6D2KTUP2pALCjRtHWJ5qZg';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -131,60 +205,56 @@
 
   let RAW_DATA = [], VIEW = 'ACTIVE';
 
-  function getStatus(exp, renewedStatus) {
-    // 1. ลำดับความสำคัญสูงสุด: แสดงตามสถานะที่ระบุ (เพื่อสื่อสารกับลูกค้า)
+function getStatus(exp, renewedStatus, lang = 'th') {
+    const labels = {
+      th: { done: "✅ ต่ออายุเรียบร้อยแล้ว", pending: "⏳ กำลังต่ออายุ", change: "📍 เปลี่ยนแหล่งผลิต", no: "ไม่ต่ออายุ", expired: "หมดอายุ", normal: "ปกติ", left: "เหลือ", year: "ปี", month: "เดือน" },
+      en: { done: "✅ Completed", pending: "⏳ Processing", change: "📍 Source Change", no: "No Renewal", expired: "Expired", normal: "Normal", left: "Remaining", year: "Y", month: "M" }
+    };
+    const t = labels[lang];
+
+    // --- ส่วนที่ปรับเป็นสีชมพู ---
     if (renewedStatus === 'ดำเนินการแล้ว') {
-      return `<span class="badge" style="background:#10b981; color:white; border:none; box-shadow:0 2px 4px rgba(16,185,129,0.2);">✅ ต่ออายุเรียบร้อยแล้ว</span>`;
+      return `<span class="badge" style="background:#fdf2f8; color:var(--pink); border:1px solid #fbcfe8;">${t.done}</span>`;
     }
     if (renewedStatus === 'อยู่ระหว่างดำเนินการ') {
-      return `<span class="badge" style="background:#fffbeb; color:#d97706; border:1px solid #fde68a;">⏳ กำลังต่ออายุ</span>`;
+      // ใช้สีชมพูเข้มขึ้นเล็กน้อยเพื่อให้ดูเป็นงานที่กำลังทำอยู่
+      return `<span class="badge" style="background:var(--pink); color:white; border:1px solid #be185d;">${t.pending}</span>`;
     }
+    // -------------------------
+
     if (renewedStatus === 'เปลี่ยนแหล่งผลิตใหม่') {
-      return `<span class="badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd">📍 เปลี่ยนแหล่งผลิต</span>`;
+      return `<span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #3b82f6;">${t.change}</span>`;
     }
     if (renewedStatus === 'ไม่ต่ออายุ') {
-      return `<span class="badge" style="color:#94a3b8; background:#f1f5f9; border:1px solid #e2e8f0">ไม่ต่ออายุ</span>`;
+      return `<span class="badge" style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1;">${t.no}</span>`;
     }
 
-    // 2. คำนวณตามวันหมดอายุจริง (หากไม่มีสถานะพิเศษ)
-    if (!exp) return `<span class="badge bg-ok">ปกติ</span>`;
+    if (!exp) return `<span class="badge bg-ok">${t.normal}</span>`;
     
     const now = new Date();
     const eff = new Date(exp);
-    now.setHours(0,0,0,0);
-    eff.setHours(0,0,0,0);
-    
     const diff = Math.ceil((eff - now) / 86400000);
     
-    if (diff < 0) return `<span class="badge bg-exp">หมดอายุ</span>`;
-   if (diff <= 1095) { // เปลี่ยนจาก 730 เป็น 1095 (3 ปี)
-  const y = Math.floor(diff/365);
-  const m = Math.floor((diff%365)/30);
-  let label = y > 0 ? `เหลือ ${y} ปี ${m} เดือน` : `เหลือ ${m} เดือน`;
-  return `<span class="badge bg-warn">${label}</span>`;
-}
+    if (diff < 0) return `<span class="badge bg-exp">${t.expired}</span>`;
     
-    return `<span class="badge bg-ok">ปกติ</span>`;
+    if (diff <= 1095) {
+      const y = Math.floor(diff/365);
+      const m = Math.floor((diff%365)/30);
+      let label = y > 0 ? `${t.left} ${y} ${t.year} ${m} ${t.month}` : `${t.left} ${m} ${t.month}`;
+      return `<span class="badge bg-warn">${label}</span>`;
+    }
+    
+    return `<span class="badge bg-ok">${t.normal}</span>`;
   }
-
   function render() {
     let rows = RAW_DATA;
 
-    // กรองตามประเภท Tab
-    if (VIEW === 'ACTIVE') {
-      rows = rows.filter(r => r.renewed_status !== 'ไม่ต่ออายุ');
-    } else if (VIEW === 'IMPORT') {
-      rows = rows.filter(r => r.renewed_status !== 'ไม่ต่ออายุ' && r.packed_volume?.includes('นำเข้า'));
-    } else if (VIEW === 'PACK') {
-      rows = rows.filter(r => r.renewed_status !== 'ไม่ต่ออายุ' && r.packed_volume?.includes('แบ่งบรรจุ'));
-    } else if (VIEW === 'DONE') { 
-      // ช่องดำเนินการต่ออายุ: รวมทั้ง "กำลังต่อ" และ "ต่อเสร็จแล้ว"
-      rows = rows.filter(r => r.renewed_status === 'ดำเนินการแล้ว' || r.renewed_status === 'อยู่ระหว่างดำเนินการ');
-    } else if (VIEW === 'CHANGE') { 
-      rows = rows.filter(r => r.renewed_status === 'เปลี่ยนแหล่งผลิตใหม่');
-    } else if (VIEW === 'NORENEW') {
-      rows = rows.filter(r => r.renewed_status === 'ไม่ต่ออายุ');
-    }
+    if (VIEW === 'ACTIVE') rows = rows.filter(r => r.renewed_status !== 'ไม่ต่ออายุ');
+    else if (VIEW === 'IMPORT') rows = rows.filter(r => r.renewed_status !== 'ไม่ต่ออายุ' && r.packed_volume?.includes('นำเข้า'));
+    else if (VIEW === 'PACK') rows = rows.filter(r => r.renewed_status !== 'ไม่ต่ออายุ' && r.packed_volume?.includes('แบ่งบรรจุ'));
+    else if (VIEW === 'DONE') rows = rows.filter(r => r.renewed_status === 'ดำเนินการแล้ว' || r.renewed_status === 'อยู่ระหว่างดำเนินการ');
+    else if (VIEW === 'CHANGE') rows = rows.filter(r => r.renewed_status === 'เปลี่ยนแหล่งผลิตใหม่');
+    else if (VIEW === 'NORENEW') rows = rows.filter(r => r.renewed_status === 'ไม่ต่ออายุ');
 
     const q = $('q').value.toLowerCase();
     if (q) {
@@ -195,13 +265,19 @@
     }
 
     $('tbody').innerHTML = rows.map((r, i) => {
+      const locale = currentLang === 'th' ? 'th-TH' : 'en-GB';
+      const yearOffset = currentLang === 'th' ? 543 : 0;
+      const yearLabel = currentLang === 'th' ? 'พ.ศ.' : 'A.D.';
+
       const regDate = r.registration_date ? new Date(r.registration_date) : null;
-      const displayRegDate = regDate ? regDate.toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'numeric' }) : '-';
-      const yearRegBE = regDate ? `(พ.ศ. ${regDate.getFullYear() + 543})` : '';
+      const displayRegDate = regDate ? regDate.toLocaleDateString(locale, { day:'numeric', month:'short', year:'numeric' }) : '-';
+      const yearRegDisplay = regDate ? `(${yearLabel} ${regDate.getFullYear() + yearOffset})` : '';
 
       const expDate = r.expiry_date ? new Date(r.expiry_date) : null;
-      const displayExpDate = expDate ? expDate.toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'numeric' }) : '-';
-      const yearExpBE = expDate ? `(พ.ศ. ${expDate.getFullYear() + 543})` : '';
+      const displayExpDate = expDate ? expDate.toLocaleDateString(locale, { day:'numeric', month:'short', year:'numeric' }) : '-';
+      const yearExpDisplay = expDate ? `(${yearLabel} ${expDate.getFullYear() + yearOffset})` : '';
+
+      const statusHtml = getStatus(r.expiry_date, r.renewed_status, currentLang);
 
       return `
         <tr>
@@ -217,14 +293,14 @@
           <td>${r.packed_volume || '-'}</td>
           <td>
             <div class="date-main">${displayRegDate}</div>
-            <div class="date-sub">${yearRegBE}</div>
+            <div class="date-sub">${yearRegDisplay}</div>
           </td>
           <td>
             <div class="date-main">${displayExpDate}</div>
-            <div class="date-sub">${yearExpBE}</div>
+            <div class="date-sub">${yearExpDisplay}</div>
           </td>
           <td>
-            <div>${getStatus(r.expiry_date, r.renewed_status)}</div>
+            <div>${statusHtml}</div>
             ${ r.renewed_note ? `<div style="color: #64748b; font-size: 11px; margin-top: 6px; padding: 4px 8px; background: #f8fafc; border-radius: 6px; border: 1px dashed #e2e8f0; line-height: 1.4;"><span style="font-weight: 600; color: #0ea5a5;">Note:</span> ${r.renewed_note}</div>` : '' }
           </td>
         </tr>
@@ -234,15 +310,13 @@
   }
 
   function updateStats() {
-    // กำลังดำเนินการ (รวมที่กำลังต่ออายุและต่อเสร็จแล้วออกไปเพื่อให้ดูรายการที่เหลือ)
     const act = RAW_DATA.filter(r => r.renewed_status !== 'ไม่ต่ออายุ' && r.renewed_status !== 'ดำเนินการแล้ว' && r.renewed_status !== 'อยู่ระหว่างดำเนินการ').length;
     const no = RAW_DATA.filter(r => r.renewed_status === 'ไม่ต่ออายุ').length;
     const exp = RAW_DATA.filter(r => r.expiry_date && new Date(r.expiry_date) < new Date() && r.renewed_status !== 'ไม่ต่ออายุ' && r.renewed_status !== 'ดำเนินการแล้ว' && r.renewed_status !== 'อยู่ระหว่างดำเนินการ').length;
     const near = RAW_DATA.filter(r => {
-  const d = Math.ceil((new Date(r.expiry_date) - new Date()) / 86400000);
-  // เปลี่ยน 730 เป็น 1095
-  return d >= 0 && d <= 1095 && r.renewed_status !== 'ไม่ต่ออายุ' && r.renewed_status !== 'ดำเนินการแล้ว' && r.renewed_status !== 'อยู่ระหว่างดำเนินการ';
-}).length;
+      const d = Math.ceil((new Date(r.expiry_date) - new Date()) / 86400000);
+      return d >= 0 && d <= 1095 && r.renewed_status !== 'ไม่ต่ออายุ' && r.renewed_status !== 'ดำเนินการแล้ว' && r.renewed_status !== 'อยู่ระหว่างดำเนินการ';
+    }).length;
 
     $('c-active').innerText = act; 
     $('c-norenew').innerText = no; 
@@ -263,15 +337,7 @@
   $('enterBtn').onclick = load;
   $('q').oninput = render;
 
-  // ตั้งค่าปุ่ม Tabs
-  const tabLogic = { 
-    't-active':'ACTIVE', 
-    't-import':'IMPORT', 
-    't-pack':'PACK', 
-    't-done':'DONE', 
-    't-change':'CHANGE',
-    't-norenew':'NORENEW' 
-  };
+  const tabLogic = { 't-active':'ACTIVE', 't-import':'IMPORT', 't-pack':'PACK', 't-done':'DONE', 't-change':'CHANGE', 't-norenew':'NORENEW' };
 
   Object.keys(tabLogic).forEach(id => {
     const el = $(id);
@@ -284,6 +350,31 @@
       };
     }
   });
+
+  function updateLanguage(lang) {
+    currentLang = lang;
+    const t = i18n[lang];
+    document.querySelector('h1').innerText = t.title;
+    $('code').placeholder = t.search_placeholder;
+    $('enterBtn').innerText = t.btn_load;
+    $('q').placeholder = t.search_table;
+
+    const statLabels = document.querySelectorAll('.stat-card .mut');
+    statLabels[0].innerText = t.stat_active;
+    statLabels[1].innerText = t.stat_near;
+    statLabels[2].innerText = t.stat_exp;
+    statLabels[3].innerText = t.stat_norenew;
+
+    const tabIds = ['t-active', 't-import', 't-pack', 't-done', 't-change', 't-norenew'];
+    tabIds.forEach((id, i) => { if($(id)) $(id).innerText = t.tabs[i]; });
+
+    const ths = document.querySelectorAll('thead th');
+    t.cols.forEach((colName, i) => { if(ths[i]) ths[i].innerText = colName; });
+
+    render();
+  }
+
+  $('langSwitch').onchange = (e) => updateLanguage(e.target.value);
 </script>
 </body>
 </html>
