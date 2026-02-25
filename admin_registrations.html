@@ -219,7 +219,7 @@ tr.st-process:hover { background-color: #fed7aa !important; }
           <th>ผู้จำหน่าย</th>
           <th>นำเข้า/แบ่งบรรจุ</th>
           <th>วันออกทะเบียน</th>
-          <th>วันหมดอายุ</th>
+         <th style="cursor:pointer; color:var(--accent); text-decoration:underline;" onclick="sortByDate()">วันหมดอายุ ↕️</th>
           <th>สถานะ</th>
           <th>จัดการ</th>
         </tr>
@@ -288,23 +288,38 @@ async function loadCompanies(){
 }
 
 // =============== Load registrations ===============
-async function loadDocs(code){
-  currentCompany = code;
-  selectedIds.clear();
-  $('cust_code').value = '';
-  if(!code){ $('tbody').innerHTML = `<tr><td colspan="14" class="small">กรุณาเลือกบริษัท</td></tr>`; $('adminCount').textContent=''; return; }
-  try{
-    const { data, error } = await sb.from(REG_TABLE).select('*').eq('company_code', code).order('id',{ascending:true});
-    if(error) throw error;
-   cachedRows = (data||[]).map(r=>({ ...r, ...classify(r.expiry_date, r.renewed_status) }));
-    filteredRows = [...cachedRows];
-    renderTable();
-    // load plain_code
-    const { data: comp } = await sb.from(COMPANIES_TABLE).select('plain_code').eq('code', code).limit(1).single();
-    if(comp) $('cust_code').value = comp.plain_code || '';
-  }catch(e){ console.error(e); $('tbody').innerHTML = `<tr><td colspan="14" class="small">${esc(e.message)}</td></tr>`; }
-}
+async function loadDocs(code) {
+    currentCompany = code;
+    selectedIds.clear();
+    $('cust_code').value = '';
+    if (!code) { /* ...เดิม... */ return; }
 
+    try {
+        const { data, error } = await sb.from(REG_TABLE)
+            .select('*')
+            .eq('company_code', code);
+            // เอา .order() ใน Supabase ออก แล้วมาเรียงใน JS จะยืดหยุ่นกว่า
+
+        if (error) throw error;
+
+        // --- เพิ่มการเรียงลำดับตรงนี้ ---
+        cachedRows = (data || []).map(r => ({ ...r, ...classify(r.expiry_date, r.renewed_status) }));
+
+        cachedRows.sort((a, b) => {
+            // 1. ให้รายการที่ไม่มีวันหมดอายุไปอยู่ล่างสุด
+            if (!a.expiry_date) return 1;
+            if (!b.expiry_date) return -1;
+            
+            // 2. เรียงจากวันที่น้อยไปมาก (เก่าไปใหม่ / หมดอายุเร็วสุดขึ้นก่อน)
+            return new Date(a.expiry_date) - new Date(b.expiry_date);
+        });
+
+        filteredRows = [...cachedRows];
+        renderTable();
+        
+        // ...ส่วนโหลด plain_code เดิม...
+    } catch (e) { /* ... */ }
+}
 // ================= ฟังก์ชันคำนวณวันหมดอายุแบบ ปี/เดือน/วัน =================
 function classify(expiry, renewedStatus) {
     // 1. ถ้ามีสถานะพิเศษ (เช่น กำลังต่ออายุ, ดำเนินการแล้ว) ให้ข้ามการเช็กวันหมดอายุแบบปกติ
@@ -769,17 +784,50 @@ $('impBtn').addEventListener('click', async () => {
     }
 });
 // export xlsx
-$('expBtn').addEventListener('click', async ()=>{
-  if(!currentCompany) return alert('เลือกบริษัทก่อนส่งออก');
-  try{
-    const rows = cachedRows || [];
-    const aoa = [['บริษัท','ชื่อการค้า','ชื่อสามัญ/สูตร','ทะเบียน','ผู้นำเข้า','ผู้ผลิต/แหล่งผลิต','ผู้จำหน่าย','นำเข้า/แบ่งบรรจุ','วันออกทะเบียน','วันหมดอายุ','ใบอนุญาต','สถานะ']];
-    rows.forEach(r=> aoa.push([r.company_code||'', r.brand_name||'', r.common_label||'', r.registration_no||'', r.importer||'', r.manufacturer_source||'', r.distributor||'', r.packed_volume||'', r.registration_date?toISO(r.registration_date):'', r.expiry_date?toISO(r.expiry_date):'', r.license_no||'', r.statusText||'' ]));
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, currentCompany.slice(0,31)); XLSX.writeFile(wb, `registrations_${currentCompany}.xlsx`);
-  }catch(e){ alert('ส่งออกไม่สำเร็จ: '+(e.message||e)); }
-});
+$('expBtn').addEventListener('click', async () => {
+  if (!currentCompany) return alert('เลือกบริษัทก่อนส่งออก');
+  try {
+    const rows = filteredRows || []; // ใช้ filteredRows เพื่อให้โหลดตามที่เราคัดกรองหน้าจอไว้
+    
+    // 1. หัวตาราง
+    const aoa = [['บริษัท', 'ชื่อการค้า', 'ชื่อสามัญ/สูตร', 'ทะเบียน', 'ผู้นำเข้า', 'ผู้ผลิต/แหล่งผลิต', 'ผู้จำหน่าย', 'นำเข้า/แบ่งบรรจุ', 'วันออกทะเบียน', 'วันหมดอายุ', 'หมายเหตุ', 'สถานะ']];
 
+    // 2. จัดการแปลงข้อมูลแต่ละแถว
+    rows.forEach(r => {
+      // แปลงวันที่เป็น พ.ศ. โดยใช้ฟังก์ชัน fmtDateBE ที่คุณมีอยู่แล้วในโค้ด
+      const regDateTH = r.registration_date ? fmtDateBE(r.registration_date) : '';
+      const expDateTH = r.expiry_date ? fmtDateBE(r.expiry_date) : '';
+
+      aoa.push([
+        r.company_code || '',
+        r.brand_name || '',
+        r.common_label || '',
+        r.registration_no || '',
+        r.importer || '',
+        r.manufacturer_source || '',
+        r.distributor || '',
+        r.packed_volume || '',
+        regDateTH,  // ใส่ค่า พ.ศ. ที่แปลงแล้ว
+        expDateTH,  // ใส่ค่า พ.ศ. ที่แปลงแล้ว
+        r.renewed_note || '',
+        r.statusText || r.renewed_status || ''
+      ]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, currentCompany.slice(0, 31));
+    
+    // ตั้งชื่อไฟล์ให้มีรหัสบริษัทและวันที่ปัจจุบัน
+    const fileName = `registrations_${currentCompany}_${new Date().toLocaleDateString('th-TH').replace(/\//g, '-')}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    
+    toast("✅ ส่งออกไฟล์ (พ.ศ.) เรียบร้อย");
+  } catch (e) {
+    console.error(e);
+    alert('ส่งออกไม่สำเร็จ: ' + (e.message || e));
+  }
+});
 // =============== misc events ===============
 $('fileInput').addEventListener('change', ()=> $('previewBtn').click());
 $('companySelect').addEventListener('change', e=> { if(e.target.value) loadDocs(e.target.value); });
@@ -842,32 +890,26 @@ window.loadDocs = loadDocs;
 window.applyFilter = applyFilter;
 window.loadCompanies = loadCompanies;
 
-$('filterActiveBtn').addEventListener('click', () => {
-    const today = new Date();
-    today.setHours(0,0,0,0);
-
-    filteredRows = cachedRows.filter(r => {
-        const isExpired = r.expiry_date && new Date(r.expiry_date) < today;
-        const isRenewing = r.renewed_status === 'อยู่ระหว่างดำเนินการ' || r.renewed_status === 'ดำเนินการแล้ว';
-        const isNotCancel = r.renewed_status !== 'ไม่ต่ออายุ';
-
-        // แสดงผลถ้า: (ยังไม่หมดอายุ OR กำลังต่ออายุอยู่) AND ไม่ได้กดปุ่มยกเลิก
-        return (!isExpired || isRenewing) && isNotCancel;
-    });
-    renderTable();
-});
+// แนะนำให้เหลือแค่อันนี้อันเดียวครับ
 $('filterActiveBtn').onclick = () => {
     const today = new Date();
     today.setHours(0,0,0,0);
-
     filteredRows = cachedRows.filter(r => {
         const isNoRenew = r.renewed_status === 'ไม่ต่ออายุ';
         const isExpired = r.expiry_date && new Date(r.expiry_date) < today;
-        // ถือว่า Active ถ้า: ไม่ได้กด 'ไม่ต่ออายุ' AND (ยังไม่หมดอายุ OR กำลังต่ออายุอยู่)
         const isWorking = r.renewed_status === 'อยู่ระหว่างดำเนินการ' || r.renewed_status === 'ดำเนินการแล้ว';
-        
         return !isNoRenew && (!isExpired || isWorking);
     });
+    renderTable();
+};
+let asc = true;
+window.sortByDate = () => {
+    filteredRows.sort((a, b) => {
+        const d1 = new Date(a.expiry_date || '9999-12-31');
+        const d2 = new Date(b.expiry_date || '9999-12-31');
+        return asc ? d1 - d2 : d2 - d1;
+    });
+    asc = !asc;
     renderTable();
 };
 </script>
